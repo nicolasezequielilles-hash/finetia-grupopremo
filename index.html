@@ -4,25 +4,540 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Grupo Premo · Portal de accionistas</title>
+<title>Grupo Premo · Informe financiero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0f221d; --panel:#16302a; --ink:#e9e4d6; --muted:#a8b5ad; --gold:#d9a441; }
-  * { box-sizing:border-box; }
-  html,body { height:100%; margin:0; }
-  body { background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; display:flex; align-items:center; justify-content:center; padding:24px; }
-  main { max-width:520px; width:100%; background:var(--panel); border:1px solid rgba(217,164,65,.25); border-radius:14px; padding:40px 32px; text-align:center; }
-  .marca { font-family:Georgia,"Times New Roman",serif; font-size:28px; letter-spacing:.08em; color:var(--gold); margin:0 0 4px; }
-  .sub { color:var(--muted); font-size:13px; margin:0 0 28px; }
-  h1 { font-size:20px; font-weight:600; margin:0 0 10px; }
-  p { color:var(--muted); line-height:1.5; margin:0; font-size:15px; }
+:root{
+  color-scheme: light;
+  --bg:#f3f1ea; --surface:#ffffff; --surface-2:#f8f6f0; --line:#e3ded0; --line-2:#cfc8b6;
+  --ink:#14211c; --ink-2:#47524b; --ink-3:#77817a;
+  --band:#0e2a23; --band-2:#143a31; --band-ink:#f1ece0; --band-ink-2:#a9bdb4;
+  --accent:#1f6b5a; --accent-ink:#ffffff; --brass:#b07c2a;
+  --bad:#a5382b; --bad-bg:#fbeeeb; --warn:#a8741f; --warn-bg:#fbf3e2; --ok:#1f7a55; --ok-bg:#e8f4ee;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4;
+  --shadow:0 1px 2px rgba(20,33,28,.06), 0 4px 14px rgba(20,33,28,.05);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme: dark;
+  --bg:#0b1613; --surface:#12211c; --surface-2:#162822; --line:#243a33; --line-2:#325046;
+  --ink:#f0eadb; --ink-2:#c6c0ad; --ink-3:#8f9b94;
+  --band:#06100d; --band-2:#0c1d18; --band-ink:#f1ece0; --band-ink-2:#8fa79d;
+  --accent:#4fa591; --accent-ink:#06100d; --brass:#dba94f;
+  --bad:#e5705f; --bad-bg:#2b1b18; --warn:#dba94f; --warn-bg:#2a2414; --ok:#56b88b; --ok-bg:#12281f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0b1613; --surface:#12211c; --surface-2:#162822; --line:#243a33; --line-2:#325046;
+  --ink:#f0eadb; --ink-2:#c6c0ad; --ink-3:#8f9b94;
+  --band:#06100d; --band-2:#0c1d18; --band-ink:#f1ece0; --band-ink-2:#8fa79d;
+  --accent:#4fa591; --accent-ink:#06100d; --brass:#dba94f;
+  --bad:#e5705f; --bad-bg:#2b1b18; --warn:#dba94f; --warn-bg:#2a2414; --ok:#56b88b; --ok-bg:#12281f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 'IBM Plex Sans',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:'Newsreader',Georgia,serif;font-weight:600;margin:0;letter-spacing:.1px}
+.num{font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit}
+.wrap{max-width:1220px;margin:0 auto;padding:0 20px}
+.hidden{display:none!important}
+
+/* ---------- ingreso ---------- */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+#login .tarjeta{width:100%;max-width:400px;background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:0 10px 40px rgba(20,33,28,.14),0 2px 6px rgba(20,33,28,.06)}
+#login .cab{background:#2b2b2d;color:#fff;padding:24px 24px 20px}
+#login .cab h1{font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:22px;font-weight:600;letter-spacing:.2px}
+#login .cab p{margin:6px 0 0;font-size:13px;color:#d9d6cc}
+#login .cab .rayita{width:48px;height:3px;background:var(--brass);border-radius:2px;margin-top:16px}
+#login form{padding:8px 24px 0}
+#login .btn{background:#2b2b2d;color:#fff;border-radius:6px;padding:13px 18px;width:100%;margin-top:22px;font-weight:500}
+#login .btn:hover{background:#3a3a3d}
+#login .pie{padding:26px 24px 20px;text-align:center;font-size:11.5px;color:var(--ink-3)}
+.marca{display:flex;align-items:center;gap:12px}
+.marca .cuadro{width:38px;height:38px;border:1.5px solid var(--brass);color:var(--brass);display:grid;place-items:center;font-family:'Newsreader',serif;font-weight:700;font-size:17px;letter-spacing:.5px;border-radius:3px}
+.marca .t{font-size:13px;letter-spacing:.22em;font-weight:600;text-transform:uppercase}
+.marca .s{font-size:11px;letter-spacing:.06em;color:var(--band-ink-2)}
+label{display:block;font-size:12px;color:var(--ink-2);margin:14px 0 5px;font-weight:500}
+input[type=text],input[type=password]{width:100%;padding:11px 12px;border:1px solid var(--line-2);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:4px;padding:11px 18px;font-weight:600;cursor:pointer;letter-spacing:.02em}
+.btn.full{width:100%;margin-top:20px}
+.btn.ghost{background:transparent;color:var(--band-ink);border:1px solid rgba(241,236,224,.28);padding:6px 12px;font-weight:500;font-size:12.5px}
+.btn.ghost:hover{background:rgba(255,255,255,.08)}
+.err{color:var(--bad);font-size:13px;margin-top:12px;min-height:18px}
+
+/* ---------- cabecera ---------- */
+header.top{background:linear-gradient(180deg,var(--band) 0%,var(--band-2) 100%);color:var(--band-ink)}
+header.top .wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:16px;padding-bottom:14px}
+header.top .marca{flex:1;min-width:220px}
+.estado{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--band-ink-2);text-align:right;line-height:1.35}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:3px 11px;font-size:12px;font-weight:600;border:1px solid transparent}
+.pill i{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+.pill.ok{background:rgba(86,184,139,.16);color:#7fd8ad;border-color:rgba(86,184,139,.35)}
+.pill.warn{background:rgba(219,169,79,.16);color:#efc171;border-color:rgba(219,169,79,.4)}
+.pill.bad{background:rgba(229,112,95,.16);color:#f2988b;border-color:rgba(229,112,95,.4)}
+nav.tabs{background:var(--band-2);border-top:1px solid rgba(241,236,224,.08);position:sticky;top:0;z-index:6;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+nav.tabs .wrap{display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto;padding-top:0;padding-bottom:0}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:13px 16px;cursor:pointer;color:var(--band-ink-2);white-space:nowrap;font-weight:500;letter-spacing:.02em}
+nav.tabs button:hover{color:var(--band-ink)}
+nav.tabs button[aria-selected=true]{color:#fff;border-bottom-color:var(--brass)}
+main{padding:22px 0 56px}
+
+/* ---------- componentes ---------- */
+.banner{border-left:4px solid var(--warn);background:var(--warn-bg);padding:10px 14px;border-radius:3px;margin:0 0 14px;font-size:13px}
+.banner.bad{border-left-color:var(--bad);background:var(--bad-bg)}
+.barra{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:16px;justify-content:space-between}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:4px;overflow:hidden;background:var(--surface)}
+.seg button{background:transparent;border:0;padding:8px 16px;cursor:pointer;color:var(--ink-2);font-weight:500}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--band);color:var(--band-ink);font-weight:600}
+.titulo-sec{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:26px 0 10px}
+.titulo-sec h2{font-size:21px}
+.titulo-sec span{color:var(--ink-3);font-size:12.5px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.panel h3{font-size:17px;margin-bottom:10px}
+.help{font-size:12px;color:var(--ink-3);margin-top:8px;line-height:1.5}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid2>.panel{margin-bottom:0}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+
+/* titular ejecutivo */
+.hero{background:linear-gradient(135deg,var(--band) 0%,var(--band-2) 100%);color:var(--band-ink);border-radius:6px;padding:24px 28px;margin-bottom:16px;box-shadow:var(--shadow);display:grid;grid-template-columns:1.5fr 1fr;gap:28px}
+.hero .et{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--band-ink-2);margin-bottom:8px}
+.hero h2{font-size:27px;line-height:1.22;font-weight:600;margin-bottom:12px}
+.hero ul{margin:0;padding:0;list-style:none;color:var(--band-ink-2);font-size:13.5px}
+.hero li{padding:5px 0 5px 16px;position:relative;border-top:1px solid rgba(241,236,224,.1)}
+.hero li:before{content:"";position:absolute;left:0;top:13px;width:6px;height:6px;background:var(--brass);border-radius:50%}
+.hero li b{color:var(--band-ink);font-weight:600}
+.hero .uso h4{margin:0 0 10px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--band-ink-2);font-weight:500}
+.uso .fila{margin-bottom:14px}
+.uso .fila .cab{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+.uso .riel{height:9px;border-radius:5px;background:rgba(241,236,224,.14);position:relative;overflow:hidden}
+.uso .riel i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#7fd8ad}
+.uso .riel i.w{background:#efc171}
+.uso .riel i.b{background:#f2988b}
+@media (max-width:900px){.hero{grid-template-columns:1fr;padding:20px}.hero h2{font-size:22px}}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--line-2);border-radius:6px;padding:13px 15px 10px;box-shadow:var(--shadow)}
+.kpi.bad{border-top-color:var(--bad)}.kpi.ok{border-top-color:var(--ok)}.kpi.warn{border-top-color:var(--brass)}
+.kpi .l{font-size:11px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+.kpi .v{font-family:'Newsreader',Georgia,serif;font-size:26px;font-weight:600;margin:3px 0 1px;letter-spacing:-.2px}
+.kpi .v.bad{color:var(--bad)}
+.kpi .s{font-size:12px;color:var(--ink-3)}
+.kpi svg{display:block;margin-top:6px}
+
+.atencion{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.atencion .it{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:4px;padding:11px 14px;background:var(--surface-2)}
+.atencion .it.r{border-left-color:var(--bad)}
+.atencion .it b.v{display:block;font-family:'Newsreader',serif;font-size:21px}
+.atencion .it span{font-size:12.5px;color:var(--ink-2)}
+
+/* tablas */
+.scrollx{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{background:var(--band);color:var(--band-ink);font-weight:600;border-bottom:0;padding:9px 9px;font-size:12px}
+thead th small{display:block;font-weight:400;color:var(--band-ink-2);font-size:11px}
+tr.sec td{background:var(--surface-2);font-weight:700;letter-spacing:.08em;font-size:11px;text-transform:uppercase;color:var(--ink-2);border-top:1px solid var(--line-2)}
+tr.sub td{font-weight:700;background:var(--surface-2)}
+tr.res td{font-weight:700;background:var(--band);color:var(--band-ink);border-bottom:0}
+tr.det td:first-child{padding-left:22px}
+tr.ini td{color:var(--ink-2);font-style:italic}
+td.bajo{color:var(--bad);font-weight:600}
+table.tl td,table.tl th{text-align:left}
+table.tl td.num,table.tl th.n{text-align:right}
+table.fl td:first-child,table.fl th:first-child{position:sticky;left:0;z-index:1}
+table.fl td:first-child{white-space:normal;min-width:200px;max-width:240px;background:var(--surface)}
+table.fl thead th:first-child{background:var(--band)}
+table.fl tr.sec td:first-child,table.fl tr.sub td:first-child{background:var(--surface-2)}
+table.fl tr.res td:first-child{background:var(--band)}
+table.fl th,table.fl td{padding:7px 7px}
+tr.tot td{font-weight:700;background:var(--surface-2)}
+tr.sel td{background:var(--ok-bg);font-weight:700}
+td.neg{color:var(--bad)}
+td.wrapc{white-space:normal}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;border:1.5px solid var(--accent);vertical-align:0}
+.dot.c{background:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--ink-2);margin:2px 0 10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.cert{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end}
+.cert i{display:inline-block;width:38px;height:6px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
+.cert i b{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
+
+/* gráficos */
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line-2);border-radius:5px;padding:7px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:3;display:none;white-space:nowrap}
+
+/* cumplimiento */
+.cump{display:grid;grid-template-columns:auto 1fr auto;gap:8px 20px;align-items:center}
+.cump h3{margin:0}
+.cump input[type=range]{width:100%;accent-color:var(--accent);min-width:160px}
+.cump .val{font-family:'Newsreader',serif;font-size:26px;font-weight:600;min-width:64px;text-align:right}
+.chips{display:flex;gap:6px;flex-wrap:wrap;grid-column:1/-1}
+.chips button{background:var(--surface);border:1px solid var(--line-2);border-radius:14px;padding:3px 12px;cursor:pointer;color:var(--ink-2);font-weight:500}
+.chips button[aria-pressed=true]{background:var(--band);color:var(--band-ink);border-color:var(--band)}
+@media (max-width:640px){.cump{grid-template-columns:1fr auto}.cump h3{grid-column:1/-1}}
+details.panel summary{cursor:pointer;color:var(--ink-2);font-weight:600}
+footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid var(--line);margin-top:20px}
+
+@media (max-width:640px){.kpi .v{font-size:22px}.wrap{padding:0 14px}.titulo-sec h2{font-size:18px}}
+@media print{
+  @page{size:A4 landscape;margin:12mm}
+  body{background:#fff}
+  header.top .btn,nav.tabs,.cump,.seg,#avisos .banner:not(.bad){display:none!important}
+  header.top,.hero,thead th,tr.res td,.seg button[aria-pressed=true]{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .panel,.kpi{box-shadow:none;break-inside:avoid}
+  main{padding:8px 0}
+}
 </style>
 </head>
 <body>
-  <main>
-    <div class="marca">FINETIA</div>
-    <div class="sub">Controller Virtual</div>
-    <h1>Grupo Premo · Portal de accionistas</h1>
-    <p>Estamos preparando el portal. Muy pronto vas a poder ingresar con tu usuario y contraseña.</p>
-  </main>
+
+<section id="login">
+  <div class="tarjeta">
+    <div class="cab"><h1>Grupo Premo</h1><p>Portal de accionistas · Informe financiero</p><div class="rayita"></div></div>
+    <form id="f_login" autocomplete="on">
+      <label for="u">Usuario</label><input id="u" type="text" autocomplete="username" required autofocus>
+      <label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password" required>
+      <button class="btn" type="submit">Ingresar</button>
+      <div class="err" id="login_err" role="alert"></div>
+    </form>
+    <div class="pie">Información confidencial. Uso exclusivo de los accionistas.</div>
+  </div>
+</section>
+
+<div id="app" class="hidden">
+  <header class="top"><div class="wrap">
+    <div class="marca"><div class="cuadro">GP</div><div><div class="t" id="titulo">Grupo Premo</div><div class="s">Informe financiero · uso exclusivo de accionistas</div></div></div>
+    <div class="estado"><div id="stamp"></div><span id="pill"></span></div>
+    <button class="btn ghost" id="imprimir">Imprimir / PDF</button>
+    <button class="btn ghost" id="tema" title="Cambiar claro/oscuro">Claro / oscuro</button>
+    <button class="btn ghost" id="salir">Salir</button>
+  </div></header>
+  <nav class="tabs" role="tablist"><div class="wrap">
+    <button role="tab" data-tab="resumen" aria-selected="true">Resumen ejecutivo</button>
+    <button role="tab" data-tab="semanas" aria-selected="false">Próximas 4 semanas</button>
+    <button role="tab" data-tab="flujo" aria-selected="false">Flujo de caja trimestral</button>
+    <button role="tab" data-tab="cobranzas" aria-selected="false">Cobranzas</button>
+    <button role="tab" data-tab="deuda" aria-selected="false">Deuda</button>
+  </div></nav>
+  <main><div class="wrap">
+    <div id="avisos"></div>
+    <div id="vista"></div>
+    <footer id="pie"></footer>
+  </div></main>
+</div>
+
+<script>
+"use strict";
+var API = "https://finetia.onrender.com";
+var D = null, tab = "resumen", ent = "GRUPO", cumpl = 1;
+var $ = function(id){ return document.getElementById(id); };
+var esc = function(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+var NF1 = new Intl.NumberFormat("es-AR", {minimumFractionDigits:1, maximumFractionDigits:1});
+var NF0 = new Intl.NumberFormat("es-AR", {maximumFractionDigits:0});
+var r1 = function(v){ return Math.round((v || 0) / 1e5) / 10; };
+var mm = function(v){ return NF1.format(r1(v)); };                                  // 1.234,5 (con signo −)
+var par = function(v){ var x = r1(v); return x < 0 ? "(" + NF1.format(-x) + ")" : NF1.format(x); };   // (1.234,5) estilo contable
+var MM = function(v){ var x = r1(v); return (x < 0 ? "−" : "") + "$ " + NF1.format(Math.abs(x)) + " M"; };
+var dm = function(iso){ return iso ? iso.slice(8,10) + "/" + iso.slice(5,7) : ""; };
+var dmy = function(iso){ return iso ? iso.slice(8,10) + "/" + iso.slice(5,7) + "/" + iso.slice(0,4) : ""; };
+var pct = function(v){ return NF0.format(Math.round((v || 0) * 100)) + "%"; };
+var SUMA = function(a){ return (a || []).reduce(function(x, y){ return x + (y || 0); }, 0); };
+var store = {
+  get: function(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set: function(k, v){ try { localStorage.setItem(k, v); } catch (e) {} },
+  del: function(k){ try { localStorage.removeItem(k); } catch (e) {} }
+};
+var NOMBRE = {GRUPO:"Grupo", HC:"Hormigones Cardales", PM:"Premoldeados"};
+
+/* ---------- sesión ---------- */
+function aplicarTema(t){ if (t) document.documentElement.setAttribute("data-theme", t); }
+aplicarTema(store.get("gp_tema"));
+$("tema").onclick = function(){
+  var actual = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  var nuevo = actual === "dark" ? "light" : "dark"; aplicarTema(nuevo); store.set("gp_tema", nuevo);
+};
+$("imprimir").onclick = function(){ window.print(); };
+function mostrarLogin(msg){ $("app").classList.add("hidden"); $("login").classList.remove("hidden"); $("login_err").textContent = msg || ""; }
+$("salir").onclick = function(){
+  var t = store.get("gp_token"); store.del("gp_token");
+  if (t) fetch(API + "/api/v1/auth/logout", {method:"POST", headers:{Authorization:"Bearer " + t}}).catch(function(){});
+  D = null; mostrarLogin("");
+};
+$("f_login").onsubmit = function(ev){
+  ev.preventDefault(); var err = $("login_err"); err.textContent = "Ingresando…";
+  fetch(API + "/api/v1/auth/login", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({username:$("u").value.trim(), password:$("p").value})})
+    .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error(j.detail || "No se pudo ingresar."); return j; }); })
+    .then(function(j){ store.set("gp_token", j.token); $("p").value = ""; err.textContent = ""; cargar(); })
+    .catch(function(e){ err.textContent = (e && e.message) || "No se pudo conectar con el servidor. Probá de nuevo en un minuto."; });
+};
+function cargar(){
+  var t = store.get("gp_token"); if (!t) return mostrarLogin("");
+  $("login").classList.add("hidden"); $("app").classList.remove("hidden"); $("vista").innerHTML = '<div class="panel">Cargando datos…</div>';
+  fetch(API + "/api/v1/portal/resumen", {headers:{Authorization:"Bearer " + t}})
+    .then(function(r){ return r.json().then(function(j){
+      if (r.status === 401) { store.del("gp_token"); throw {login:true, message:"La sesión venció. Ingresá de nuevo."}; }
+      if (!r.ok) throw new Error(j.detail || "Error del servidor."); return j; }); })
+    .then(function(j){ D = j; cumpl = 1; pintar(); })
+    .catch(function(e){
+      if (e && e.login) return mostrarLogin(e.message);
+      $("vista").innerHTML = '<div class="banner bad">' + esc((e && e.message) || "No se pudo leer el resumen.") + ' <button class="btn" id="reintentar" style="margin-left:10px;padding:5px 12px">Reintentar</button></div>';
+      var b = $("reintentar"); if (b) b.onclick = cargar;
+    });
+}
+
+/* ---------- cabecera ---------- */
+function encabezado(){
+  var m = D.meta; $("titulo").textContent = D.titulo; document.title = D.titulo + " · Informe financiero";
+  var act = m.actualizado_ar ? new Date(m.actualizado_ar) : null, hoy = new Date();
+  var esHoy = act && act.toDateString() === hoy.toDateString(), viejo = act && (hoy - act) > 4 * 864e5, cal = m.calidad || {};
+  var cls = viejo ? "bad" : (cal.datos_atrasados || !esHoy ? "warn" : "ok");
+  var txt = viejo ? "Sin actualizar" : esHoy ? "Actualizado hoy" : "Actualizado " + (act ? act.toLocaleDateString("es-AR", {weekday:"long", day:"numeric", month:"numeric"}) : "");
+  $("pill").innerHTML = '<span class="pill ' + cls + '"><i></i>' + txt + '</span>';
+  $("stamp").innerHTML = (act ? act.toLocaleTimeString("es-AR", {hour:"2-digit", minute:"2-digit", hour12:false}) + " h · " : "") + 'saldos al ' + dmy(m.fecha_saldos) + '<br>cobranzas y deuda al ' + dmy(m.fecha_paquete);
+  var av = [];
+  if (viejo) av.push('<div class="banner bad">La actualización automática no corre desde hace más de 4 días. Los números pueden estar desactualizados.</div>');
+  (cal.avisos || []).forEach(function(a){ av.push('<div class="banner">' + esc(a) + '</div>'); });
+  $("avisos").innerHTML = av.join("");
+}
+
+/* ---------- gráficos ---------- */
+function spark(v, color, w, h){
+  w = w || 120; h = h || 28; var lo = Math.min.apply(null, v), hi = Math.max.apply(null, v), sp = (hi - lo) || 1;
+  var pts = v.map(function(x, i){ return (i / (v.length - 1) * (w - 4) + 2).toFixed(1) + "," + (h - 3 - (x - lo) / sp * (h - 6)).toFixed(1); }).join(" ");
+  return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + " " + h + '" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+}
+function lineaPosicion(host, pos, acuerdo, semanas){
+  var W = host.clientWidth && host.clientWidth < 620 ? 360 : 1000, H = W < 700 ? 230 : 300, ml = W < 700 ? 50 : 62, mr = W < 700 ? 10 : 16, mt = 14, mb = 34, n = pos.length;
+  var lo = Math.min.apply(null, pos.concat([-acuerdo, 0])), hi = Math.max.apply(null, pos.concat([0]));
+  var pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+  var x = function(i){ return ml + (W - ml - mr) * (n > 1 ? i / (n - 1) : .5); }, y = function(v){ return mt + (H - mt - mb) * (1 - (v - lo) / (hi - lo)); };
+  var step = Math.pow(10, Math.floor(Math.log10((hi - lo) / 4))), k = (hi - lo) / 4 / step; step *= k < 1.5 ? 1 : k < 3.5 ? 2 : k < 7.5 ? 5 : 10;
+  var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Posición bancaria acumulada por semana">';
+  for (var t = Math.ceil(lo / step) * step; t <= hi; t += step) s += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--line)"/><text x="' + (ml - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end" font-size="12" fill="var(--ink-3)">' + NF0.format(Math.round(t / 1e6)) + '</text>';
+  s += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="var(--ink-3)" stroke-width="1.2"/>';
+  if (acuerdo) s += '<rect x="' + ml + '" y="' + y(-acuerdo) + '" width="' + (W - ml - mr) + '" height="' + Math.max(0, y(lo + pad) - y(-acuerdo)) + '" fill="var(--bad)" opacity=".06"/><line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(-acuerdo) + '" y2="' + y(-acuerdo) + '" stroke="var(--bad)" stroke-width="1.4" stroke-dasharray="6 5"/><text x="' + (W - mr) + '" y="' + (y(-acuerdo) - 6) + '" text-anchor="end" font-size="12" fill="var(--bad)">Acuerdos con bancos −' + NF0.format(Math.round(acuerdo / 1e6)) + '</text>';
+  var d = pos.map(function(v, i){ return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1); }).join(" ");
+  s += '<path d="' + d + " L" + x(n - 1) + " " + y(0) + " L" + x(0) + " " + y(0) + ' Z" fill="var(--s1)" opacity=".10"/><path d="' + d + '" fill="none" stroke="var(--s1)" stroke-width="2.4" stroke-linejoin="round"/>';
+  var mn = Math.min.apply(null, pos), im = pos.indexOf(mn);
+  pos.forEach(function(v, i){ s += '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="' + (i === im ? 5 : 3) + '" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/>'; });
+  s += '<text x="' + x(im) + '" y="' + ((acuerdo && Math.abs(y(mn) - y(-acuerdo)) < 40) ? y(mn) - 12 : y(mn) + 20) + '" text-anchor="' + (im === 0 ? "start" : (im > n - 3 && n > 4 ? "end" : "middle")) + '" font-size="12" font-weight="600" fill="var(--ink)">Mínimo ' + NF0.format(Math.round(mn / 1e6)) + '</text>';
+  var cada = n > 8 ? (W < 700 ? 4 : 2) : 1;
+  semanas.forEach(function(w, i){ if (i % cada === 0) s += '<text x="' + x(i) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="12" fill="var(--ink-3)">' + dm(w.desde) + '</text>'; });
+  s += '<line id="cx" y1="' + mt + '" y2="' + (H - mb) + '" stroke="var(--ink-3)" stroke-dasharray="3 3" style="display:none"/><rect id="hit" x="' + ml + '" y="' + mt + '" width="' + (W - ml - mr) + '" height="' + (H - mt - mb) + '" fill="transparent"/></svg><div class="tip"></div>';
+  host.innerHTML = s;
+  var svg = host.querySelector("svg"), tip = host.querySelector(".tip"), cx = host.querySelector("#cx"), hit = host.querySelector("#hit");
+  function mover(ev){
+    var r = svg.getBoundingClientRect(), px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / r.width * W;
+    var i = Math.max(0, Math.min(n - 1, Math.round((px - ml) / (W - ml - mr) * (n - 1))));
+    cx.setAttribute("x1", x(i)); cx.setAttribute("x2", x(i)); cx.style.display = "";
+    tip.innerHTML = '<b>Semana ' + (i + 1) + '</b> · ' + dm(semanas[i].desde) + ' al ' + dm(semanas[i].hasta) + '<br>Posición: <b class="num">' + MM(pos[i]) + '</b>' + (acuerdo ? '<br>Margen sobre acuerdos: <span class="num">' + MM(pos[i] + acuerdo) + '</span>' : "");
+    tip.style.display = "block"; var left = x(i) / W * r.width + 12; tip.style.left = Math.max(0, Math.min(left, r.width - tip.offsetWidth - 4)) + "px"; tip.style.top = "6px";
+  }
+  hit.addEventListener("mousemove", mover); hit.addEventListener("touchmove", mover, {passive:true}); hit.addEventListener("touchstart", mover, {passive:true});
+  hit.addEventListener("mouseleave", function(){ tip.style.display = "none"; cx.style.display = "none"; });
+}
+function barrasSemanales(host, cob, pag, semanas){
+  var n = cob.length, W = host.clientWidth && host.clientWidth < 620 ? 360 : 1000, H = W < 700 ? 200 : 250, ml = W < 700 ? 50 : 62, mr = W < 700 ? 10 : 16, mt = 12, mb = 32;
+  var hi = Math.max.apply(null, cob.concat(pag.map(Math.abs))) || 1, y = function(v){ return mt + (H - mt - mb) * (1 - v / hi); };
+  var cw = (W - ml - mr) / n, bw = cw * 0.36, s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Ingresos y egresos por semana">';
+  var step = Math.pow(10, Math.floor(Math.log10(hi / 3))); var k = hi / 3 / step; step *= k < 1.5 ? 1 : k < 3.5 ? 2 : k < 7.5 ? 5 : 10;
+  for (var t = 0; t <= hi; t += step) s += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--line)"/><text x="' + (ml - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end" font-size="12" fill="var(--ink-3)">' + NF0.format(Math.round(t / 1e6)) + '</text>';
+  var r = function(x0, v, c, ttl){ var h = Math.max(1, y(0) - y(Math.abs(v))), y0 = y(0); return '<path d="M' + x0 + " " + y0 + " V" + (y0 - h + 3) + " Q" + x0 + " " + (y0 - h) + " " + (x0 + 3) + " " + (y0 - h) + " H" + (x0 + bw - 3) + " Q" + (x0 + bw) + " " + (y0 - h) + " " + (x0 + bw) + " " + (y0 - h + 3) + " V" + y0 + ' Z" fill="' + c + '"><title>' + ttl + '</title></path>'; };
+  var cada = n > 8 && W < 700 ? 4 : 1;
+  for (var i = 0; i < n; i++) {
+    var x0 = ml + cw * i + cw * 0.12;
+    s += r(x0, cob[i], "var(--s1)", "Semana " + (i + 1) + " · ingresos " + MM(cob[i])) + r(x0 + bw + 2, pag[i], "var(--s2)", "Semana " + (i + 1) + " · egresos " + MM(pag[i]));
+    if (i % cada === 0) s += '<text x="' + (ml + cw * (i + 0.5)) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="12" fill="var(--ink-3)">' + dm(semanas[i].desde) + '</text>';
+  }
+  host.innerHTML = s + "</svg>";
+}
+function barraApilada(host, filas, colores, etiquetas){
+  var tot = Math.max.apply(null, filas.map(function(f){ return f.total; })) || 1, s = "";
+  filas.forEach(function(f){
+    s += '<div style="display:flex;align-items:center;gap:10px;margin:9px 0"><div style="width:128px;font-size:13px">' + esc(f.nombre) + '</div><div style="flex:1;display:flex;gap:2px;height:28px">';
+    f.partes.forEach(function(p, i){ if (p > 0) s += '<div title="' + esc(etiquetas[i] + ": " + MM(p)) + '" style="width:' + (p / tot * 100).toFixed(2) + '%;background:' + colores[i] + ';border-radius:3px"></div>'; });
+    s += '</div><div class="num" style="width:104px;text-align:right;font-weight:600">' + MM(f.total) + '</div></div>';
+  });
+  host.innerHTML = s;
+}
+
+/* ---------- piezas ---------- */
+function kpi(l, v, s, tono, extra){ return '<div class="kpi ' + (tono || "") + '"><div class="l">' + l + '</div><div class="v num' + (tono === "bad" ? " bad" : "") + '">' + v + '</div><div class="s">' + s + '</div>' + (extra || "") + '</div>'; }
+function selector(){ return '<div class="seg" role="group" aria-label="Empresa">' + ["GRUPO","HC","PM"].map(function(e){ return '<button data-ent="' + e + '" aria-pressed="' + (e === ent) + '">' + NOMBRE[e] + '</button>'; }).join("") + '</div>'; }
+function tituloSec(t, s){ return '<div class="titulo-sec"><h2>' + t + '</h2>' + (s ? '<span>' + s + '</span>' : "") + '</div>'; }
+function escenario(c, e){ var k = D.escenarios.filter(function(x){ return Math.abs(x.cumpl - c) < 1e-9; })[0]; return k ? k.emp[e] : null; }
+function panelCumplimiento(){
+  return '<div class="panel"><div class="cump"><h3>Cumplimiento de cobranza</h3><input type="range" id="rng" min="0" max="100" step="10" value="' + Math.round(cumpl * 100) + '" aria-label="Cumplimiento de cobranza"><div class="val num">' + pct(cumpl) + '</div>' +
+    '<div class="chips">' + [100,80,50,20,0].map(function(p){ return '<button data-c="' + p + '" aria-pressed="' + (Math.round(cumpl * 100) === p) + '">' + p + '%</button>'; }).join("") + '</div></div>' +
+    '<div class="help">Qué parte de la cobranza sin fecha confirmada se cobra en la fecha esperada. Las facturas con fecha real informada por el equipo no se modifican. 100% es el escenario base.</div></div>';
+}
+function lineas(d, S, n){
+  // arma las filas del flujo; con el escenario elegido solo cambian las tres líneas de cobranza
+  var g = function(k){ var v = (S && S[k]) ? S[k] : d[k]; return v.slice(0, n); };
+  var L = {cob_clientes:g("cob_clientes"), cob_echeq:g("cob_echeq"), cob_nuevas:g("cob_nuevas"), pag_cheques:d.pag_cheques.slice(0, n), pag_transf:d.pag_transf.slice(0, n), pag_estimado:d.pag_estimado.slice(0, n),
+           sueldos:d.sueldos.slice(0, n), impuestos:d.impuestos.slice(0, n), arca:d.arca.slice(0, n), financieros:d.financieros.slice(0, n)};
+  var tot = function(ks){ var o = []; for (var i = 0; i < n; i++) o.push(ks.reduce(function(a, k){ return a + L[k][i]; }, 0)); return o; };
+  L.ingresos = tot(["cob_clientes","cob_echeq","cob_nuevas"]); L.oper = tot(["pag_cheques","pag_transf","pag_estimado","sueldos"]); L.fiscal = tot(["impuestos","arca"]);
+  L.egresos = tot(["pag_cheques","pag_transf","pag_estimado","sueldos","impuestos","arca","financieros"]); L.resultado = tot(["cob_clientes","cob_echeq","cob_nuevas","pag_cheques","pag_transf","pag_estimado","sueldos","impuestos","arca","financieros"]);
+  L.posicion = (S && S.posicion ? S.posicion : d.posicion).slice(0, n); L.margen = (S && S.margen ? S.margen : d.margen).slice(0, n); L.certeza = (S && S.certeza ? S.certeza : d.certeza).slice(0, n);
+  return L;
+}
+function tablaFlujo(L, n, F, pos0){
+  var cab = '<thead><tr><th>En millones de $</th>' + D.semanas.slice(0, n).map(function(w){ return '<th>Sem. ' + w.n + '<small>' + dm(w.desde) + '–' + dm(w.hasta) + '</small></th>'; }).join("") + '<th>Total<small>' + n + ' sem.</small></th></tr></thead>';
+  var cel = function(v, cls){ return '<td class="num' + (cls ? " " + cls : "") + '">' + par(v) + '</td>'; };
+  var det = function(lbl, k, c){ return '<tr class="det"><td><span class="dot ' + c + '"></span>' + lbl + '</td>' + L[k].map(function(v){ return cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
+  var sub = function(lbl, k){ return '<tr class="sub"><td>' + lbl + '</td>' + L[k].map(function(v){ return cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
+  var sec = function(lbl){ return '<tr class="sec"><td colspan="' + (n + 2) + '">' + lbl + '</td></tr>'; };
+  var h = '<div class="legend"><span><span class="dot c"></span>Comprometido: ya registrado (facturas, cheques, planes)</span><span><span class="dot"></span>Estimado: ritmo real de pagos y cobranzas de los extractos</span></div><div class="scrollx"><table class="fl">' + cab + '<tbody>';
+  h += '<tr class="ini"><td>Saldo bancario inicial (todos los bancos)</td><td class="num">' + par(pos0) + '</td>' + new Array(n + 1).join("<td></td>") + '</tr>';
+  h += sec("Ingresos") + det("Cobranzas de clientes (cuentas a cobrar)", "cob_clientes", "c") + det("Echeqs de clientes en cartera", "cob_echeq", "c") + det("Cobranzas de ventas nuevas", "cob_nuevas", "") + sub("Total ingresos", "ingresos");
+  h += sec("Egresos operativos") + det("Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + det("Proveedores: transferencias y cuenta corriente", "pag_transf", "c") + det("Proveedores y NOF: ritmo estimado", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "") + sub("Total egresos operativos", "oper");
+  h += sec("Egresos fiscales") + det("Impuestos y cargas sociales", "impuestos", "") + det("Planes de ARCA (regularización de cuotas)", "arca", "c") + sub("Total egresos fiscales", "fiscal");
+  h += sec("Egresos financieros") + det("Intereses, comisiones y débitos", "financieros", "");
+  h += '<tr class="res"><td>Resultado de la semana</td>' + L.resultado.map(function(v){ return cel(v); }).join("") + cel(SUMA(L.resultado)) + '</tr>';
+  h += '<tr class="sub"><td>Saldo bancario final (posición)</td>' + L.posicion.map(function(v){ return cel(v, v < -F.acuerdo ? "bajo" : ""); }).join("") + '<td></td></tr>';
+  h += '<tr><td>Margen disponible sobre acuerdos</td>' + L.margen.map(function(v){ return cel(v); }).join("") + '<td></td></tr>';
+  h += '<tr><td>Certeza: parte comprometida del movimiento</td>' + L.certeza.map(function(v){ return '<td class="num"><span class="cert"><i><b style="width:' + Math.round((v || 0) * 100) + '%"></b></i>' + pct(v) + '</span></td>'; }).join("") + '<td></td></tr>';
+  return h + '</tbody></table></div>';
+}
+function sinDetalle(){ $("vista").innerHTML = '<div class="panel">El detalle por línea se publica con la próxima actualización automática (todos los días hábiles a las 11:00).</div>'; }
+
+/* ---------- vistas ---------- */
+function titularEjecutivo(){
+  var F = D.flujo.GRUPO, al = D.alertas.filter(function(a){ return a.emp === "GRUPO"; })[0], d = F.detalle;
+  var rojo = al && al.nivel === "rojo", faltan = F.minimo < -F.acuerdo ? -(F.minimo + F.acuerdo) : 0;
+  var cuatro = d ? Math.min.apply(null, d.posicion.slice(0, 4)) : null;
+  var h1 = rojo ? "El grupo superaría sus acuerdos bancarios desde la semana " + al.semana + " (" + dm(D.semanas[al.semana - 1].desde) + ")" : (al ? "El grupo opera con margen ajustado frente a sus acuerdos bancarios" : "La liquidez del grupo queda cubierta durante las próximas 13 semanas");
+  var uso = F.acuerdo ? Math.max(0, -F.pos0) / F.acuerdo : 0;
+  var li = ['Hoy la posición bancaria es <b>' + MM(F.pos0) + '</b>' + (F.acuerdo ? ", " + pct(uso) + " de los acuerdos con bancos (" + MM(F.acuerdo) + ")" : "") + ".",
+    (cuatro !== null ? 'En las próximas 4 semanas el punto más bajo es <b>' + MM(cuatro) + '</b>' + (F.acuerdo ? (cuatro < -F.acuerdo ? ", por encima de los acuerdos." : ", dentro de los acuerdos.") : ".") : ""),
+    'A 13 semanas el mínimo es <b>' + MM(F.minimo) + '</b> en la semana ' + F.semana_minimo + (faltan > 0 ? "; faltarían <b>" + MM(faltan) + "</b> sobre los acuerdos." : "; sin superar los acuerdos."),
+    'Se estima cobrar <b>' + MM(F.cobranza) + '</b> y pagar <b>' + MM(-F.pagos) + '</b> en el trimestre; <b>' + pct(F.pct_cobranza_conocida) + '</b> de la cobranza ya está registrada.'].filter(Boolean);
+  var fila = function(e){ var ac = D.flujo[e].acuerdo, dsc = D.deuda.resumen[e].descubierto, p = ac ? dsc / ac : 0, c = p > 1 ? "b" : p > .8 ? "w" : "";
+    return '<div class="fila"><div class="cab"><span>' + NOMBRE[e] + '</span><span class="num">' + MM(dsc) + ' de ' + MM(ac) + ' · <b>' + pct(p) + '</b></span></div><div class="riel"><i class="' + c + '" style="width:' + Math.min(100, p * 100).toFixed(1) + '%"></i></div></div>'; };
+  return '<section class="hero"><div><div class="et">Situación del grupo</div><h2>' + h1 + '</h2><ul>' + li.map(function(x){ return '<li>' + x + '</li>'; }).join("") + '</ul></div>' +
+    '<div class="uso"><h4>Uso hoy de los acuerdos con bancos</h4>' + fila("GRUPO") + fila("HC") + fila("PM") + '<div style="font-size:11.5px;color:var(--band-ink-2)">El descubierto usado es el saldo negativo en cuenta corriente al ' + dmy(D.meta.fecha_saldos) + '.</div></div></section>';
+}
+function puntosAtencion(){
+  var C = D.cobranzas.total, A = D.deuda.arca, P = D.deuda.proveedores, it = [];
+  var pv = P.por_empresa.HC.vencido + P.por_empresa.PM.vencido, av = A.vencido.HC + A.vencido.PM;
+  if (C.vencido > 0) it.push(['', MM(C.vencido), "de cartera de clientes vencida (" + pct(C.vencido / (C.importe || 1)) + " del total a cobrar)"]);
+  if (av > 0) it.push(['r', MM(av), "en cuotas vencidas de planes de ARCA, con pago programado en el último día permitido"]);
+  if (pv > 0) it.push(['r', MM(pv), "de deuda con proveedores ya vencida"]);
+  D.alertas.filter(function(a){ return a.emp !== "GRUPO"; }).forEach(function(a){ it.push([a.nivel === "rojo" ? "r" : "", NOMBRE[a.emp], esc(a.texto)]); });
+  if (!it.length) return "";
+  return tituloSec("Puntos de atención") + '<div class="atencion">' + it.map(function(x){ return '<div class="it ' + x[0] + '"><b class="v num">' + x[1] + '</b><span>' + x[2] + '</span></div>'; }).join("") + '</div>';
+}
+function vistaResumen(){
+  var F = D.flujo[ent], deu = D.deuda.resumen[ent], faltan = F.minimo < -F.acuerdo ? -(F.minimo + F.acuerdo) : 0;
+  var h = titularEjecutivo() + '<div class="barra">' + selector() + '<span class="help" style="margin:0">Los indicadores siguientes corresponden a ' + NOMBRE[ent] + '.</span></div>';
+  h += '<div class="kpis">' +
+    kpi("Posición bancaria hoy", MM(F.pos0), F.acuerdo ? "acuerdos " + MM(F.acuerdo) : "sin acuerdo", F.pos0 < 0 ? "bad" : "ok") +
+    kpi("Punto más bajo · 13 semanas", MM(F.minimo), "semana " + F.semana_minimo + " (" + dm(D.semanas[F.semana_minimo - 1].desde) + ")", faltan > 0 ? "bad" : "ok", spark(F.posicion, "var(--s1)")) +
+    kpi("Cobranza · 13 semanas", MM(F.cobranza), "comprometida " + pct(F.pct_cobranza_conocida), "", spark(F.lineas.cobranza, "var(--s1)")) +
+    kpi("Pagos · 13 semanas", MM(F.pagos), "ARCA " + MM(F.totales.arca) + " · sueldos " + MM(F.totales.sueldos), "", spark(F.pagos_semanal.map(Math.abs), "var(--s2)")) +
+    kpi("Deuda total", MM(deu.total), "descubierto, ARCA, cauciones, proveedores y otros", "warn") + '</div>';
+  h += '<div class="panel"><h3>Alertas</h3>' + alertasDe(ent) + (ent === "GRUPO" ? '<div class="help">Para el grupo se suman los acuerdos de las dos empresas, lo que supone pasar fondos de PM a HC. Sin pasar fondos, el margen mínimo es ' + MM(Math.min.apply(null, F.margen_sin_intercompany || F.margen)) + '.</div>' : "") + '</div>';
+  h += '<div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + '</h3><div class="chart" id="ch_pos"></div><div class="help">En millones de pesos. Negativa = descubierto usado. Por debajo de la línea roja se superan los acuerdos con los bancos.</div></div>';
+  h += '<div class="panel"><h3>Ingresos y egresos por semana</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div>';
+  h += (ent === "GRUPO" ? puntosAtencion() : "");
+  $("vista").innerHTML = h;
+  lineaPosicion($("ch_pos"), F.posicion, F.acuerdo, D.semanas);
+  barrasSemanales($("ch_bar"), F.lineas.cobranza, F.pagos_semanal, D.semanas);
+}
+function alertasDe(e){
+  var al = D.alertas.filter(function(a){ return a.emp === e; });
+  return al.length ? al.map(function(a){ return '<div style="display:flex;gap:12px;justify-content:space-between;padding:7px 0 7px 12px;border-left:4px solid ' + (a.nivel === "rojo" ? "var(--bad)" : "var(--warn)") + ';margin:6px 0;font-size:13px"><span>' + esc(a.texto) + (a.peor !== undefined ? ' · punto más bajo ' + MM(a.peor) + ' en la semana ' + a.semanaPeor : "") + '</span>' + (a.nivel === "rojo" ? '<b class="num" style="color:var(--bad);white-space:nowrap">faltan ' + MM(-(a.peor + D.flujo[e].acuerdo)) + '</b>' : "") + '</div>'; }).join("") : '<div class="help">Sin alertas en las 13 semanas.</div>';
+}
+function vistaSemanas(){
+  var F = D.flujo[ent]; if (!F.detalle) return sinDetalle();
+  var n = 4, S = escenario(cumpl, ent), L = lineas(F.detalle, S, n), mn = Math.min.apply(null, L.posicion), pos0 = F.pos0;
+  var h = '<div class="barra">' + selector() + '<span class="help" style="margin:0">Semanas del ' + dm(D.semanas[0].desde) + ' al ' + dm(D.semanas[n - 1].hasta) + '</span></div>' + panelCumplimiento();
+  h += '<div class="kpis">' + kpi("Ingresos · 4 semanas", MM(SUMA(L.ingresos)), "cobranzas de clientes, echeqs y ventas nuevas", "") + kpi("Egresos · 4 semanas", MM(SUMA(L.egresos)), "proveedores, sueldos, impuestos, ARCA y financieros", "") +
+    kpi("Resultado · 4 semanas", MM(SUMA(L.resultado)), "ingresos menos egresos", SUMA(L.resultado) < 0 ? "bad" : "ok") + kpi("Saldo al cierre de la semana 4", MM(L.posicion[n - 1]), "mínimo del período " + MM(mn), mn < -F.acuerdo ? "bad" : "warn") + '</div>';
+  h += '<div class="grid2"><div class="panel"><h3>Posición bancaria al cierre de cada semana</h3><div class="chart" id="ch_pos"></div></div><div class="panel"><h3>Ingresos y egresos</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div></div>';
+  h += '<div class="panel" style="margin-top:16px"><h3>Cash flow de las próximas 4 semanas · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3>' + tablaFlujo(L, n, F, pos0) +
+    '<div class="help">Los egresos no cambian con el cumplimiento de cobranza. Sueldos y NOF se estiman con el ritmo real de pagos de las últimas 13 semanas (' + (D.meta.ventana_ritmo ? dm(D.meta.ventana_ritmo[0]) + " al " + dm(D.meta.ventana_ritmo[1]) : "") + ') según los extractos bancarios.</div></div>';
+  $("vista").innerHTML = h;
+  lineaPosicion($("ch_pos"), L.posicion, F.acuerdo, D.semanas.slice(0, n));
+  barrasSemanales($("ch_bar"), L.ingresos, L.egresos, D.semanas.slice(0, n));
+}
+function vistaFlujo(){
+  var F = D.flujo[ent]; if (!F.detalle) return sinDetalle();
+  var n = 13, S = escenario(cumpl, ent), L = lineas(F.detalle, S, n), mn = Math.min.apply(null, L.posicion), faltan = mn < -F.acuerdo ? -(mn + F.acuerdo) : 0;
+  var h = '<div class="barra">' + selector() + '<span class="help" style="margin:0">Trimestre móvil: semanas del ' + dm(D.semanas[0].desde) + ' al ' + dm(D.semanas[n - 1].hasta) + '</span></div>' + panelCumplimiento();
+  h += '<div class="kpis">' + kpi("Punto más bajo", MM(mn), "semana " + (L.posicion.indexOf(mn) + 1), faltan > 0 ? "bad" : "ok") + kpi("Faltan sobre acuerdos", faltan > 0 ? MM(faltan) : "—", F.acuerdo ? "acuerdos " + MM(F.acuerdo) : "sin acuerdo", faltan > 0 ? "bad" : "ok") +
+    kpi("Ingresos · 13 semanas", MM(SUMA(L.ingresos)), pct(cumpl) + " de cumplimiento", "") + kpi("Egresos · 13 semanas", MM(SUMA(L.egresos)), "no cambian con el cumplimiento", "") + '</div>';
+  h += '<div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3><div class="chart" id="ch_pos"></div></div>';
+  h += '<div class="panel"><h3>Flujo de caja trimestral · ' + NOMBRE[ent] + '</h3>' + tablaFlujo(L, n, F, F.pos0) + '</div>';
+  h += '<div class="panel"><h3>¿Qué pasa si se cobra menos?</h3><div class="scrollx"><table><thead><tr><th>Cumplimiento</th><th>Punto más bajo</th><th>Semana</th><th>Faltan sobre acuerdos</th></tr></thead><tbody>' +
+    D.escenarios.map(function(e){ var p = e.emp[ent].posicion, m = Math.min.apply(null, p), f = m < -F.acuerdo ? -(m + F.acuerdo) : 0;
+      return '<tr' + (Math.abs(e.cumpl - cumpl) < 1e-9 ? ' class="sel"' : "") + '><td>' + pct(e.cumpl) + '</td><td class="num">' + par(m) + '</td><td class="num">' + (p.indexOf(m) + 1) + '</td><td class="num' + (f > 0 ? " neg" : "") + '">' + (f > 0 ? par(f) : "—") + '</td></tr>'; }).join("") + '</tbody></table></div></div>';
+  h += '<details class="panel"><summary>Cómo se arma este flujo</summary><div class="help" style="font-size:13px;line-height:1.65;margin-top:10px">Saldos: Excel diario de Tesorería (cuentas corrientes y acuerdos de descubierto). Cobranzas: cuentas a cobrar por fecha de vencimiento; lo vencido se cobra la semana siguiente; AESA paga a 30 días desde la factura; las cobranzas confirmadas por el equipo toman la fecha real. Pagos: deuda a proveedores del sistema, cheques propios diferidos, planes de ARCA (pagados en el último día permitido), sueldos, impuestos y el ritmo de pagos reciente de los extractos bancarios. No incluye operaciones entre las empresas del grupo.</div></details>';
+  $("vista").innerHTML = h;
+  lineaPosicion($("ch_pos"), L.posicion, F.acuerdo, D.semanas);
+}
+function vistaCobranzas(){
+  var C = D.cobranzas, t = C.total;
+  var h = '<div class="kpis">' + kpi("Cartera a cobrar", MM(t.importe), t.facturas + " facturas abiertas (con IVA)", "") + kpi("Vencida", MM(t.vencido), pct(t.vencido / (t.importe || 1)) + " de la cartera", t.vencido > 0 ? "bad" : "ok") +
+    kpi("A vencer en 30 días", MM(t.a_30), "", "") + kpi("A más de 30 días", MM(t.mas_30), "", "") + kpi("Con fecha real informada", t.con_fecha_real + " facturas", MM(t.importe_fecha_real), "warn") + '</div>';
+  h += '<div class="grid2">' + ["HC","PM"].map(function(e){ var x = C.por_empresa[e];
+    return '<div class="panel"><h3>' + NOMBRE[e] + '</h3><table><tbody><tr><td>Cartera</td><td class="num"><b>' + mm(x.importe) + '</b></td></tr><tr><td>Vencida</td><td class="num neg">' + mm(x.vencido) + '</td></tr><tr><td>A 30 días</td><td class="num">' + mm(x.a_30) + '</td></tr><tr><td>A más de 30 días</td><td class="num">' + mm(x.mas_30) + '</td></tr></tbody></table></div>'; }).join("") + '</div>';
+  h += '<div class="panel" style="margin-top:16px"><h3>Principales clientes · en millones de $</h3><div class="scrollx"><table class="tl"><thead><tr><th>Cliente</th><th>Empresa</th><th class="n">Facturas</th><th class="n">Total</th><th class="n">Vencido</th><th class="n">A 30 días</th><th class="n">Más de 30</th><th class="n">Con fecha real</th></tr></thead><tbody>' +
+    C.clientes.map(function(c){ return '<tr><td>' + esc(c.cliente) + '</td><td>' + c.emp + '</td><td class="num">' + c.facturas + '</td><td class="num"><b>' + mm(c.importe) + '</b></td><td class="num' + (c.vencido > 0 ? " neg" : "") + '">' + mm(c.vencido) + '</td><td class="num">' + mm(c.a_30) + '</td><td class="num">' + mm(c.mas_30) + '</td><td class="num">' + (c.con_fecha_real || "—") + '</td></tr>'; }).join("") +
+    (C.otros_clientes ? '<tr class="tot"><td>Otros ' + C.otros_clientes + ' clientes</td><td></td><td></td><td class="num">' + mm(C.importe_otros) + '</td><td></td><td></td><td></td><td></td></tr>' : "") + '</tbody></table></div>' +
+    '<div class="help">Echeqs de clientes en cartera: ' + C.echeqs_en_cartera.cantidad + ' por ' + MM(C.echeqs_en_cartera.importe) + '. “Con fecha real” indica que el equipo informó cuándo se cobra esa factura.</div></div>';
+  $("vista").innerHTML = h;
+}
+var COL = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)"], ETQ = ["Descubierto bancario","Planes de ARCA","Cauciones","Proveedores","Otros pasivos"], CLV = ["descubierto","arca","cauciones","proveedores","otros"];
+function vistaDeuda(){
+  var R = D.deuda.resumen, G = R.GRUPO, A = D.deuda.arca, P = D.deuda.proveedores, S = D.deuda.pasivos;
+  var h = '<div class="kpis">' + kpi("Deuda total del grupo", MM(G.total), "sin operaciones entre empresas", "warn") + ETQ.map(function(l, i){ return kpi(l, MM(G[CLV[i]]), pct(G[CLV[i]] / (G.total || 1)) + " del total", ""); }).join("") + '</div>';
+  h += '<div class="panel"><h3>Composición de la deuda · en millones de $</h3><div class="legend">' + ETQ.map(function(l, i){ return '<span><i style="background:' + COL[i] + '"></i>' + l + '</span>'; }).join("") + '</div><div id="ch_deu"></div>' +
+    '<div class="scrollx"><table style="margin-top:10px"><thead><tr><th></th>' + ETQ.map(function(l){ return '<th>' + l + '</th>'; }).join("") + '<th>Total</th></tr></thead><tbody>' +
+    ["GRUPO","HC","PM"].map(function(e){ var r = R[e]; return '<tr' + (e === "GRUPO" ? ' class="tot"' : "") + '><td>' + NOMBRE[e] + '</td>' + CLV.map(function(k){ return '<td class="num">' + mm(r[k]) + '</td>'; }).join("") + '<td class="num"><b>' + mm(r.total) + '</b></td></tr>'; }).join("") + '</tbody></table></div>' +
+    '<div class="help">El descubierto es lo usado hoy de los acuerdos con los bancos. Las garantías (por ejemplo el T-Bill que respalda el descubierto de PM) se muestran aparte y no suman.</div></div>';
+  h += '<div class="panel"><h3>Planes de ARCA</h3>' + (A.planes.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Plan</th><th>Empresa</th><th class="n">Cuotas pendientes</th><th class="n">Saldo</th><th class="n">Cuotas vencidas</th><th class="n">Importe vencido</th><th class="n">Próxima cuota</th><th class="n">Se paga hasta</th></tr></thead><tbody>' +
+    A.planes.map(function(p){ return '<tr><td>' + esc(p.plan) + '</td><td>' + p.emp + '</td><td class="num">' + p.cuotas + '</td><td class="num"><b>' + mm(p.saldo) + '</b></td><td class="num' + (p.vencidas ? " neg" : "") + '">' + (p.vencidas || "—") + '</td><td class="num' + (p.vencidas ? " neg" : "") + '">' + (p.vencidas ? mm(p.importe_vencido) : "—") + '</td><td class="num">' + dmy(p.proximo_vto) + '</td><td class="num">' + (p.proximo_limite ? dmy(p.proximo_limite) : "—") + '</td></tr>'; }).join("") +
+    '<tr class="tot"><td>Total</td><td></td><td></td><td class="num">' + mm(A.saldo.HC + A.saldo.PM) + '</td><td></td><td class="num neg">' + mm(A.vencido.HC + A.vencido.PM) + '</td><td></td><td></td></tr></tbody></table></div>' : '<div class="help">Sin planes de ARCA pendientes.</div>') + '</div>';
+  h += '<div class="panel"><h3>Cauciones</h3>' + (S.cauciones.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Agente</th><th>Boleto</th><th>Empresa</th><th class="n">Vence</th><th class="n">TNA</th><th class="n">Capital</th><th class="n">A pagar al vencimiento</th></tr></thead><tbody>' +
+    S.cauciones.map(function(c){ return '<tr><td>' + esc(c.agente) + '</td><td>' + esc(c.boleto) + '</td><td>' + c.emp + '</td><td class="num">' + dmy(c.vto) + '</td><td class="num">' + (c.tna ? NF1.format(c.tna * 100) + "%" : "—") + '</td><td class="num">' + mm(c.capital) + '</td><td class="num"><b>' + mm(c.monto) + '</b></td></tr>'; }).join("") + '</tbody></table></div>' : '<div class="help">Sin cauciones vigentes.</div>') + '</div>';
+  h += '<div class="panel"><h3>Proveedores · financiamiento con proveedores</h3><div class="grid2">' + ["HC","PM"].map(function(e){ var x = P.por_empresa[e]; return '<table><thead><tr><th>' + NOMBRE[e] + '</th><th>Monto</th></tr></thead><tbody><tr><td>Total a pagar</td><td class="num"><b>' + mm(x.importe) + '</b></td></tr><tr><td>Ya vencido</td><td class="num neg">' + mm(x.vencido) + '</td></tr><tr><td>Vence en 30 días</td><td class="num">' + mm(x.a_30) + '</td></tr><tr><td>Vence a más de 30 días</td><td class="num">' + mm(x.mas_30) + '</td></tr></tbody></table>'; }).join("") + '</div>' +
+    '<div class="scrollx" style="margin-top:14px"><table class="tl"><thead><tr><th>Principales proveedores</th><th>Empresa</th><th class="n">Total</th><th class="n">Vencido</th></tr></thead><tbody>' + P.principales.map(function(p){ return '<tr><td>' + esc(p.proveedor) + '</td><td>' + p.emp + '</td><td class="num"><b>' + mm(p.importe) + '</b></td><td class="num' + (p.vencido > 0 ? " neg" : "") + '">' + (p.vencido > 0 ? mm(p.vencido) : "—") + '</td></tr>'; }).join("") +
+    (P.otros ? '<tr class="tot"><td>Otros ' + P.otros + ' proveedores</td><td></td><td class="num">' + mm(P.importe_otros) + '</td><td></td></tr>' : "") + '</tbody></table></div></div>';
+  h += '<div class="panel"><h3>Otros pasivos</h3>' + (S.otros.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Categoría</th><th>Concepto</th><th>Empresa</th><th class="n">Saldo</th><th class="n">Vence</th><th class="n">Cuota estimada</th><th>Observación</th></tr></thead><tbody>' +
+    S.otros.map(function(o){ return '<tr style="' + (o.suma ? "" : "color:var(--ink-3)") + '"><td>' + esc(o.categoria) + '</td><td>' + esc(o.concepto) + '</td><td>' + o.emp + '</td><td class="num"><b>' + mm(o.saldo) + '</b>' + (o.suma ? "" : " (no suma)") + '</td><td class="num">' + (o.vto ? dmy(o.vto) : "—") + '</td><td class="num">' + (o.cuota ? mm(o.cuota) + (o.frecuencia ? " " + esc(o.frecuencia) : "") : "—") + '</td><td class="wrapc">' + esc(o.obs) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+    '<div class="help">Total que suma a la deuda: ' + MM(S.otros_total) + '. Se carga en la planilla de pasivos de Drive (UOCRA, fondo de cese laboral, préstamos y otros).</div>' : '<div class="help">Todavía no se cargó la planilla de pasivos (UOCRA, fondo de cese laboral, etc.).</div>') + '</div>';
+  $("vista").innerHTML = h;
+  barraApilada($("ch_deu"), ["GRUPO","HC","PM"].map(function(e){ var r = R[e]; return {nombre:NOMBRE[e], total:r.total, partes:CLV.map(function(k){ return r[k]; })}; }), COL, ETQ);
+}
+function pintar(){
+  if (!D) return;
+  encabezado();
+  if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else vistaDeuda();
+  $("pie").textContent = "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
+}
+function marcarTab(){ document.querySelectorAll("nav.tabs button").forEach(function(x){ x.setAttribute("aria-selected", x.getAttribute("data-tab") === tab); }); }
+document.querySelectorAll("nav.tabs button").forEach(function(b){
+  b.onclick = function(){ tab = b.getAttribute("data-tab"); marcarTab(); store.set("gp_tab", tab); pintar(); window.scrollTo(0, 0); };
+});
+$("vista").addEventListener("click", function(ev){
+  var b = ev.target.closest("button"); if (!b) return;
+  if (b.hasAttribute("data-ent")) { ent = b.getAttribute("data-ent"); pintar(); }
+  else if (b.hasAttribute("data-c")) { cumpl = +b.getAttribute("data-c") / 100; pintar(); }
+});
+$("vista").addEventListener("input", function(ev){ if (ev.target.id === "rng") { cumpl = +ev.target.value / 100; pintar(); var r = $("rng"); if (r) r.focus(); } });
+(function(){ var t = store.get("gp_tab"); if (t && document.querySelector('nav.tabs button[data-tab="' + t + '"]')) { tab = t; marcarTab(); } })();
+cargar();
+</script>
 </body>
 </html>
