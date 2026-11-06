@@ -366,6 +366,7 @@ function encabezado(){
   $("avisos").innerHTML = av.join("");
   var bp = $("btn_publicar"); if (bp) bp.onclick = publicar;
   var bm = $("btn_modo"); if (bm) bm.onclick = cambiarModo;
+  var ba = $("btn_actualizar"); if (ba) ba.onclick = actualizarAhora;
 }
 function barraAdmin(pub, sello){
   var auto = pub.modo === "automatica", t;
@@ -374,6 +375,7 @@ function barraAdmin(pub, sello){
   else t = '<b>Informe publicado</b> el ' + esc(sello.replace("Publicado el ", "")) + (pub.publicado_por ? ' por ' + esc(pub.publicado_por) : '') + '. Los accionistas ven esta versión.';
   return '<div class="banner admin"><span>' + t + '</span><span class="acc">' +
     (!auto && pub.pendiente ? '<button class="btn" id="btn_publicar">Publicar este informe</button>' : '') +
+    '<button class="btn ghost" id="btn_actualizar" title="Lee de nuevo la carpeta de Drive y recalcula el informe">Actualizar ahora</button>' +
     '<button class="btn ghost" id="btn_modo">' + (auto ? 'Pasar a publicación manual' : 'Pasar a publicación automática') + '</button></span></div>';
 }
 function panelEntradas(es){
@@ -389,6 +391,26 @@ function llamar(metodo, ruta, cuerpo){
 function publicar(){
   if (!confirm("¿Publicar este informe para los accionistas?")) return;
   llamar("POST", "/api/v1/portal/publicar", {snapshot_id: D.publicacion.mostrado_id}).then(cargar).catch(function(e){ alert(e.message); });
+}
+function actualizarAhora(){
+  var b = $("btn_actualizar"); if (!b || b.disabled) return;
+  if (!confirm("¿Actualizar ahora con lo que hay en Drive? Tarda entre 1 y 3 minutos y el resultado queda como borrador hasta que lo publiques.")) return;
+  var rotulo = b.textContent; b.disabled = true; b.textContent = "Actualizando…";
+  var fin = function(){ b.disabled = false; b.textContent = rotulo; };
+  llamar("POST", "/api/v1/actualizacion/ejecutar").then(function(r){
+    if (!r.iniciada) b.textContent = "Ya había una en curso…";
+    var n = 0, t = setInterval(function(){
+      n++;
+      llamar("GET", "/api/v1/actualizacion/estado").then(function(e){
+        if (e.corriendo) { b.textContent = "Actualizando… " + (e.paso || ""); return; }
+        clearInterval(t); fin();
+        var u = (e.corridas || [])[0];
+        if (u && u.estado === "error") alert("La actualización falló: " + (u.mensaje || "revisá los archivos de Drive."));
+        cargar();
+      }).catch(function(){ if (n > 3) { clearInterval(t); fin(); } });
+      if (n > 72) { clearInterval(t); fin(); }
+    }, 5000);
+  }).catch(function(e){ fin(); alert(e.message); });
 }
 function cambiarModo(){
   var nuevo = D.publicacion.modo === "automatica" ? "manual" : "automatica";
