@@ -211,6 +211,18 @@ table.fl th,table.fl td{padding:7px 7px}
 tr.tot td{font-weight:700;background:var(--surface-2)}
 tr.sel td{background:var(--accent-bg);font-weight:700}
 td.neg{color:var(--bad)}
+table.vt th.g{text-align:center;border-left:1px solid var(--band-line,rgba(255,255,255,.25))}
+table.vt td.g,table.vt th.g1{border-left:1px solid var(--line-2)}
+table.vt tr.un td{background:var(--surface-2);font-weight:700;letter-spacing:.06em;font-size:11.5px;text-transform:uppercase;color:var(--accent-deep);border-top:1px solid var(--line-2)}
+table.vt tr.sc td{font-weight:600}
+table.vt tr.em td:first-child{padding-left:26px;color:var(--ink-2)}
+table.vt td.cer{color:var(--ink-2)}
+table.vt td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);min-width:190px;max-width:260px;white-space:normal}
+@media (max-width:640px){table.vt td:first-child{min-width:132px;max-width:150px}table.vt tr.em td:first-child{padding-left:16px}}
+table.vt tr.un td:first-child,table.vt tr.tot td:first-child{background:var(--surface-2)}
+table.vt thead th:first-child{position:sticky;left:0;z-index:2;background:var(--band)}
+.pc-ok{color:var(--ok);font-weight:600}.pc-warn{color:var(--warn);font-weight:600}.pc-bad{color:var(--bad);font-weight:600}
+.vend{display:inline-block;margin-left:6px;font-size:10px;color:var(--ink-3);border:1px solid var(--line-2);border-radius:8px;padding:0 5px}
 td.wrapc{white-space:normal}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;border:1.5px solid var(--accent);vertical-align:0}
 .dot.c{background:var(--accent)}
@@ -276,6 +288,7 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
     <button role="tab" data-tab="semanas" aria-selected="false">Próximas 4 semanas</button>
     <button role="tab" data-tab="flujo" aria-selected="false">Flujo de caja trimestral</button>
     <button role="tab" data-tab="cobranzas" aria-selected="false">Cobranzas</button>
+    <button role="tab" data-tab="ventas" aria-selected="false">Proyección de ventas</button>
     <button role="tab" data-tab="deuda" aria-selected="false">Deuda</button>
   </div></nav>
   <main><div class="wrap">
@@ -308,6 +321,7 @@ var MM = function(v){ var x = r1(v); return (x < 0 ? "−" : "") + "$ " + NF1.fo
 var dm = function(iso){ return iso ? iso.slice(8,10) + "/" + iso.slice(5,7) : ""; };
 var dmy = function(iso){ return iso ? iso.slice(8,10) + "/" + iso.slice(5,7) + "/" + iso.slice(0,4) : ""; };
 var pct = function(v){ return NF0.format(Math.round((v || 0) * 100)) + "%"; };
+var NF2 = function(v){ return new Intl.NumberFormat("es-AR", {minimumFractionDigits:2, maximumFractionDigits:2}).format(v); };
 var SUMA = function(a){ return (a || []).reduce(function(x, y){ return x + (y || 0); }, 0); };
 var store = {
   get: function(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -378,10 +392,18 @@ function barraAdmin(pub, sello){
     '<button class="btn ghost" id="btn_actualizar" title="Lee de nuevo la carpeta de Drive y recalcula el informe">Actualizar ahora</button>' +
     '<button class="btn ghost" id="btn_modo">' + (auto ? 'Pasar a publicación manual' : 'Pasar a publicación automática') + '</button></span></div>';
 }
+function lineaArchivado(){
+  var a = D.meta && D.meta.archivado; if (!a) return "";
+  if (!a.activo) return '<div class="help">Archivado automático en Drive: apagado. Los archivos viejos se quedan en la carpeta.</div>';
+  var u = a.ultimo; if (!u) return '<div class="help">Archivado automático en Drive: encendido. Todavía no hubo una corrida que archive.</div>';
+  var t = u.movidos.length ? 'Se movieron ' + u.movidos.length + (u.movidos.length === 1 ? ' archivo reemplazado' : ' archivos reemplazados') + ' a ' + esc(u.carpeta) + ': ' + u.movidos.slice(0, 6).map(function(m){ return esc(m.nombre); }).join(", ") + (u.movidos.length > 6 ? "…" : "") + "."
+    : 'Sin archivos reemplazados para mover (último control ' + esc(String(u.fecha || "").split("-").reverse().join("/")) + ').';
+  return '<div class="help">Archivado automático en Drive: ' + t + (u.errores && u.errores.length ? ' <b class="neg">' + esc(u.errores[0]) + '</b>' : '') + '</div>';
+}
 function panelEntradas(es){
   var malos = es.filter(function(e){ return e.estado !== "ok"; }).length, ico = {ok:"●", atencion:"▲", falta:"■"}, tx = {ok:"Al día", atencion:"Revisar", falta:"Falta"};
   return '<details class="panel entradas"' + (malos ? " open" : "") + '><summary><b>Estado de los datos de entrada</b> · ' + (malos ? malos + (malos === 1 ? " punto para revisar" : " puntos para revisar") : "todo al día") + '</summary>' +
-    '<ul class="ents">' + es.map(function(e){ return '<li class="' + e.estado + '"><span class="ent">' + ico[e.estado] + ' ' + tx[e.estado] + '</span><span class="nm">' + esc(e.nombre) + '</span><span class="dt">' + esc(e.detalle) + '</span></li>'; }).join("") + '</ul></details>';
+    '<ul class="ents">' + es.map(function(e){ return '<li class="' + e.estado + '"><span class="ent">' + ico[e.estado] + ' ' + tx[e.estado] + '</span><span class="nm">' + esc(e.nombre) + '</span><span class="dt">' + esc(e.detalle) + '</span></li>'; }).join("") + '</ul>' + lineaArchivado() + '</details>';
 }
 function llamar(metodo, ruta, cuerpo){
   var t = store.get("gp_token");
@@ -623,6 +645,73 @@ function vistaCobranzas(){
     '<div class="help">Echeqs de clientes en cartera: ' + C.echeqs_en_cartera.cantidad + ' por ' + MM(C.echeqs_en_cartera.importe) + '. “Con fecha real” indica que el equipo informó cuándo se cobra esa factura.</div></div>';
   $("vista").innerHTML = h;
 }
+var nivelV = 2, todosV = false;
+function vistaVentas(){
+  var V = D.ventas;
+  if (!V) { $("vista").innerHTML = '<div class="panel"><h3>Proyección de ventas</h3><div class="help">Todavía no hay un pronóstico de ventas cargado. Cuando Comercial suba la planilla de proyección a la carpeta de Drive, aparece acá y empieza a ajustar la cobranza del flujo de caja.</div></div>'; return; }
+  var M = V.meses, T = V.total, cur = T[1], cer = T[0], I = V.impacto || {}, admin = D.publicacion && D.publicacion.rol === "admin";
+  var pc = function(x){ return x === null || x === undefined ? "—" : Math.round(x * 100) + "%"; };
+  var tono = function(x){ return x === null || x === undefined ? "" : (x >= 0.95 ? "pc-ok" : (x >= 0.7 ? "pc-warn" : "pc-bad")); };
+  var sg = function(v){ return (v >= 0 ? "+" : "−") + MM(Math.abs(v)).replace("−", ""); };
+  var h = '<div class="kpis">' +
+    kpi("Proyectado · próximos 3 meses", MM(V.proyectado_3m), M.slice(1).filter(function(m){ return m.disponible; }).map(function(m){ return m.nombre.split(" ")[0]; }).join(", ") + (V.faltan.length ? " · falta " + V.faltan.join(", ") : ""), V.faltan.length ? "warn" : "") +
+    kpi(M[1].nombre + " · en curso", MM(cur.p), "real cargado " + MM(cur.r) + " · " + pc(cur.pct) + " ejecutado", "") +
+    kpi(M[0].nombre + " · cerrado", pc(cer.pct) + " ejecutado", "real " + MM(cer.r) + " sobre " + MM(cer.p) + " proyectado", cer.pct === null ? "" : (cer.pct >= 0.95 ? "ok" : (cer.pct >= 0.7 ? "warn" : "bad"))) +
+    kpi("Acumulado a " + V.acumulado.hasta.split(" ")[0].toLowerCase(), pc(V.acumulado.pct) + " ejecutado", "real " + MM(V.acumulado.r) + " sobre " + MM(V.acumulado.p), "") +
+    kpi("Al flujo · 13 semanas", I.activo ? MM(I.cobranza_nueva) : "Sin pronóstico", I.activo ? "cobranza de ventas nuevas, con IVA · " + sg(I.total || 0) + " contra el ritmo de los bancos" : "el flujo usa el ritmo de los bancos", "") + '</div>';
+  var cab1 = '<th rowspan="2">Unidad de negocios · sector · empresa</th>' + M.map(function(m, i){ return '<th class="g" colspan="3">' + m.nombre + '<small>' + (m.rol === "cerrado" ? "mes cerrado" : (m.rol === "en_curso" ? "en curso" : "próximo")) + (m.disponible ? "" : " · sin pronóstico") + '</small></th>'; }).join("");
+  var cab2 = M.map(function(){ return '<th class="n g1">Proyectado</th><th class="n">Real</th><th class="n">% ejec.</th>'; }).join("");
+  var celdas = function(c){ return c.map(function(x, i){
+    if (!M[i].disponible) return '<td class="num g" colspan="3" style="color:var(--ink-3);text-align:center">—</td>';
+    var k = i === 0 ? " cer" : "";
+    var sinReal = M[i].rol === "proximo" && !x.r;   // un mes que todavía no empezó no tiene ejecución
+    return '<td class="num g' + k + '">' + (x.p ? mm(x.p) : "—") + '</td><td class="num' + k + '">' + (x.r ? mm(x.r) : "—") + '</td><td class="num ' + (i === 0 ? tono(x.pct) : "") + '">' + ((x.p || x.r) && !sinReal ? pc(x.pct) : "—") + '</td>'; }).join(""); };
+  var filas = V.filas.filter(function(f){ return f.nivel <= nivelV && (todosV || f.v || f.nivel === 0); }).map(function(f){
+    return '<tr class="' + ["un", "sc", "em"][f.nivel] + '"><td>' + esc(f.nombre) + (f.vendedor ? '<span class="vend" title="Vendedor">' + esc(f.vendedor) + '</span>' : "") + '</td>' + celdas(f.c) + '</tr>'; }).join("");
+  h += '<div class="panel"><h3>Pronóstico de ventas · en millones de $</h3>' +
+    '<div class="chips" style="margin-bottom:10px">' + [["Unidades", 0], ["Sectores", 1], ["Empresas", 2]].map(function(o){ return '<button data-nv="' + o[1] + '" aria-pressed="' + (nivelV === o[1]) + '">' + o[0] + '</button>'; }).join("") +
+      (V.sin_importes_en_ventana ? '<button id="btn_todosv" aria-pressed="' + todosV + '" style="margin-left:10px">' + (todosV ? "Ocultar renglones sin importes" : "Ver también los " + V.sin_importes_en_ventana + " renglones sin importes en estos meses") + '</button>' : "") + '</div>' +
+    '<div class="scrollx"><table class="tl vt"><thead><tr>' + cab1 + '</tr><tr>' + cab2 + '</tr></thead><tbody>' + filas +
+    '<tr class="tot"><td>Total grupo</td>' + celdas(T) + '</tr></tbody></table></div>' +
+    '<div class="help">Tal como lo carga Comercial en su planilla: unidad de negocios, sector y empresa. % ejecutado = real ÷ proyectado. El real del mes en curso se completa cuando Comercial lo carga.' + (V.faltan.length ? ' <b>Falta el pronóstico de ' + V.faltan.join(", ") + '</b>: cuando se suba la planilla de ese año, la columna se completa sola.' : '') + '</div></div>';
+  var hayCN = V.contrato.some(function(x){ return x; }) || V.nuevas.some(function(x){ return x; });
+  if (hayCN) h += '<div class="panel"><h3>Ventas bajo contrato y ventas nuevas · proyectado</h3><div class="scrollx"><table class="tl"><thead><tr><th>Mes</th><th class="n">Bajo contrato</th><th class="n">Ventas nuevas</th><th class="n">% bajo contrato</th></tr></thead><tbody>' +
+    M.map(function(m, i){ var c = V.contrato[i], n = V.nuevas[i]; if (!c && !n) return ""; return '<tr><td>' + m.nombre + '</td><td class="num"><b>' + mm(c || 0) + '</b></td><td class="num">' + mm(n || 0) + '</td><td class="num">' + pct((c || 0) / ((c || 0) + (n || 0) || 1)) + '</td></tr>'; }).join("") +
+    '</tbody></table></div><div class="help">Según la clasificación de la planilla de Comercial. Lo que está bajo contrato tiene orden de compra; las ventas nuevas todavía hay que cerrarlas.</div></div>';
+  var F = V.flujo || {}, C = V.control, RT = V.retencion || {}, ivaT = NF0.format(Math.round((F.iva || 0.21) * 100)) + "%";
+  var fch = function(a, b){ return dmy(a).slice(0, 5) + " al " + dmy(b).slice(0, 5); };
+  h += '<div class="panel"><h3>Cómo entra el pronóstico al flujo de caja · con IVA</h3>' + (I.activo ?
+    '<div class="scrollx"><table class="tl"><thead><tr><th>Mes de la venta</th><th>Clientes</th><th class="n">Venta esperada<small>sin IVA</small></th><th class="n">Con IVA<small>' + ivaT + '</small></th><th class="n">Ya facturado<small>en cartera</small></th><th class="n">Falta facturar<small>entra al flujo</small></th><th class="n">Se cobra</th></tr></thead><tbody>' +
+    F.meses.slice().sort(function(a, b){ return a.ym < b.ym ? -1 : a.ym > b.ym ? 1 : (a.clase < b.clase ? -1 : 1); }).map(function(m){
+      return '<tr><td>' + m.nombre + '</td><td>' + (m.clase === "aesa" ? "AESA" : "Resto de clientes") + '</td><td class="num">' + mm(m.esperado) + '</td><td class="num">' + mm(m.con_iva) + '</td><td class="num">' + (m.ya_facturado ? mm(m.ya_facturado) : "—") + '</td><td class="num"><b>' + mm(m.falta) + '</b></td><td class="num">' + fch(m.cobro_desde, m.cobro_hasta) + '</td></tr>'; }).join("") +
+    '<tr class="tot"><td>Total</td><td></td><td class="num">' + mm(F.meses.reduce(function(t, m){ return t + m.esperado; }, 0)) + '</td><td class="num">' + mm(F.meses.reduce(function(t, m){ return t + m.con_iva; }, 0)) + '</td><td class="num">' + mm(F.meses.reduce(function(t, m){ return t + m.ya_facturado; }, 0)) + '</td><td class="num">' + mm(F.meses.reduce(function(t, m){ return t + m.falta; }, 0)) + '</td><td></td></tr></tbody></table></div>' +
+    '<div class="scrollx" style="margin-top:12px"><table class="tl"><thead><tr><th>Semanas que empiezan en</th><th class="n">Cobranza de ventas nuevas</th><th class="n">Diferencia con el método anterior</th></tr></thead><tbody>' +
+    I.por_mes.map(function(m){ return '<tr><td>' + m.nombre + ' (' + m.semanas + (m.semanas === 1 ? " semana" : " semanas") + ')</td><td class="num"><b>' + mm(m.cobranza_nueva) + '</b></td><td class="num' + (m.ajuste < 0 ? " neg" : "") + '">' + mm(m.ajuste) + '</td></tr>'; }).join("") +
+    '<tr class="tot"><td>Total 13 semanas</td><td class="num">' + mm(I.cobranza_nueva) + '</td><td class="num' + (I.total < 0 ? " neg" : "") + '">' + mm(I.total) + '</td></tr></tbody></table></div>' +
+    '<div class="help">El pronóstico de Comercial viene sin IVA. Al flujo entra lo que falta facturar de cada mes: venta esperada × ' + NF2(1 + (F.iva || 0.21)) + ', menos lo que ya está facturado (esas facturas ya figuran en Cobranzas, con IVA, y no se cuentan dos veces). ' +
+    'Se factura parejo en los días hábiles del mes y se cobra a los ' + F.plazo.resto + ' días (plazo real de la cartera abierta); AESA a los ' + F.plazo.aesa + '. El importe es del grupo y se reparte según lo que cobra cada empresa en bancos: Hormigones Cardales ' + pct(I.reparto.HC) + ', Premoldeados ' + pct(I.reparto.PM) + '. ' +
+    (F.sin_pronostico.length ? 'Para ' + F.sin_pronostico.join(", ") + ' no hay pronóstico: esas ventas siguen con el ritmo de cobro de los bancos. ' : '') +
+    'El método anterior (ritmo de cobro de los bancos de las últimas 13 semanas) daba ' + MM(I.metodo_anterior) + '. Cada vez que Comercial actualiza la planilla, o se sube una cartera nueva, el flujo se recalcula solo.</div>'
+    : '<div class="help">El pronóstico todavía no entra al flujo: no cubre el mes en curso ni los siguientes. Mientras tanto, la cobranza de ventas nuevas usa el ritmo de cobro de los bancos.</div>') + '</div>';
+  if (C) h += '<div class="panel"><h3>Control · facturado con IVA contra cobrado en bancos</h3><div class="scrollx"><table class="tl"><thead><tr><th>Mes</th><th class="n">Facturado<small>sin IVA</small></th><th class="n">Facturado<small>con IVA</small></th><th class="n">Cobrado en bancos</th><th class="n">Cobrado ÷ facturado</th></tr></thead><tbody>' +
+    C.filas.map(function(f){ return '<tr><td>' + f.nombre + '</td><td class="num">' + mm(f.facturado_neto) + '</td><td class="num">' + mm(f.facturado_iva) + '</td><td class="num"><b>' + mm(f.cobrado) + '</b></td><td class="num">' + pc(f.pct) + '</td></tr>'; }).join("") +
+    '<tr class="tot"><td>Total</td><td class="num">' + mm(C.total.facturado_neto) + '</td><td class="num">' + mm(C.total.facturado_iva) + '</td><td class="num">' + mm(C.total.cobrado) + '</td><td class="num ' + tono(C.total.pct) + '">' + pc(C.total.pct) + '</td></tr></tbody></table></div>' +
+    '<div class="help">Facturado = ventas reales de la planilla de Comercial × ' + NF2(1 + (F.iva || 0.21)) + '. Cobrado = lo que entró de clientes a los bancos (transferencias y cobranzas, más los echeqs de clientes entregados a proveedores). Lo que se cobra en un mes corresponde sobre todo a lo facturado el mes anterior, por eso conviene mirar el total. ' +
+    (C.total.diferencia < 0 ? 'En el período se cobraron ' + MM(-C.total.diferencia) + ' menos que lo facturado con IVA (' + MM(-C.total.diferencia_mensual) + ' por mes). Puede ser cartera que creció, cobros que entran por otra vía o retenciones de otros impuestos; si la diferencia se mantiene, el flujo con IVA está proyectando de más.' : 'En el período se cobró más de lo facturado con IVA: se recuperó cartera de meses anteriores.') + '</div></div>';
+  h += '<div class="panel"><h3>Certificado de no retención de IVA</h3>' + (RT.activo ?
+    '<div class="kpis">' + (function(){ var es = Object.keys(RT.hasta).sort(), igual = es.every(function(e){ return RT.hasta[e] === RT.hasta[es[0]]; });
+        return igual ? kpi("Vence el", dmy(RT.hasta[es[0]]), es.join(" y ") + " · hasta esa fecha se cobra el 100% de la factura", "")
+          : kpi("Vence", es.map(function(e){ return e + " " + dmy(RT.hasta[e]).slice(0, 5); }).join(" · "), "hasta esa fecha se cobra el 100% de la factura", ""); })() +
+      kpi("Después del vencimiento", "−" + NF1.format(RT.sobre_factura * 100) + "% de cada cobro", "retención del " + pct(RT.tasa) + " del IVA", "warn") +
+      kpi("Efecto en 13 semanas", MM(RT.total), "cobranza que queda retenida", RT.total < 0 ? "bad" : "") +
+      (RT.minimo_con_certificado !== undefined ? kpi("Punto más bajo de caja", MM(RT.minimo_sin_certificado), "con el certificado vigente sería " + MM(RT.minimo_con_certificado), "") : "") + '</div>' +
+    '<div class="help">Desde el día siguiente al vencimiento, los clientes retienen el ' + pct(RT.tasa) + ' del IVA al pagar: aplica a las facturas ya emitidas que se cobren después y a las ventas nuevas. Los echeqs ya recibidos no cambian. El IVA retenido no se toma como recupero en este flujo.</div>'
+    : '<div class="help">Vigente, sin fecha de vencimiento cargada: el flujo supone que se cobra el 100% de cada factura, con el IVA completo. Cuando se cargue la fecha de vencimiento en la hoja “Parámetros” de la planilla de pasivos, desde ese día el flujo descuenta la retención del 50% del IVA (8,7% de cada cobro) y muestra cuánta caja se pierde.</div>') + '</div>';
+  if (admin && V.avisos && V.avisos.length) h += '<div class="panel"><h3>Avisos de lectura · solo administrador</h3>' + V.avisos.map(function(a){ return '<div class="help" style="margin-top:4px">▲ ' + esc(a) + '</div>'; }).join("") + '</div>';
+  $("vista").innerHTML = h;
+  document.querySelectorAll("button[data-nv]").forEach(function(b){ b.onclick = function(){ nivelV = +b.getAttribute("data-nv"); vistaVentas(); }; });
+  if ($("btn_todosv")) $("btn_todosv").onclick = function(){ todosV = !todosV; vistaVentas(); };
+}
 var ETQ = ["Descubierto bancario","Cauciones bursátiles","Echeqs descontados (Acindar)","Planes de ARCA","Préstamos bancarios","Proveedores","Otros pasivos"], CLV = ["descubierto","cauciones","echeqs","arca","prestamos","proveedores","otros"];
 function panelCosto(){
   var K = D.deuda.costo; if (!K) return "";
@@ -799,7 +888,7 @@ document.addEventListener("keydown", function(ev){ if (ev.key === "Escape" && $(
 function pintar(){
   if (!D) return;
   encabezado(); configurarChat();
-  if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else vistaDeuda();
+  if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else vistaDeuda();
   $("pie").textContent = "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
 }
 function marcarTab(){ document.querySelectorAll("nav.tabs button").forEach(function(x){ x.setAttribute("aria-selected", x.getAttribute("data-tab") === tab); }); }
