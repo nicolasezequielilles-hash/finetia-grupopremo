@@ -840,10 +840,24 @@ function panelIAAdmin(){
   return '<div class="panel ia-admin"><h3>Asistente de IA · administración</h3>' +
     '<div class="barra"><label for="ia_modo" style="margin:0">Botón “Preguntale al informe”:</label><select id="ia_modo">' + op("apagado", "Apagado para todos") + op("admin", "Solo para mí (prueba)") + op("accionistas", "Habilitado para accionistas") + '</select></div>' +
     '<p class="help">' + (ia.disponible ? 'IA conectada.' : 'IA sin conectar: falta ANTHROPIC_API_KEY en Render.') + ' Límite: ' + ia.limite_accionista + ' preguntas por día por accionista (' + ia.limite_diario + ' para vos). Los accionistas solo consultan el informe publicado.</p>' +
+    '<div class="barra" style="margin:8px 0"><button class="btn ghost" id="ia_probar">Probar la conexión con la IA</button></div><div id="ia_diag"></div>' +
     '<details id="ia_log"><summary>Ver preguntas recientes</summary><div id="ia_log_c" class="help">Cargando…</div></details></div>';
 }
 function accionesIAAdmin(){
   var s = $("ia_modo"); if (!s) return;
+  var bp = $("ia_probar");
+  if (bp) bp.onclick = function(){
+    bp.disabled = true; bp.textContent = "Probando…"; $("ia_diag").innerHTML = "";
+    llamar("GET", "/api/v1/portal/ia/diagnostico").then(function(d){
+      var c = d.clave, li = function(t){ return '<div class="help" style="margin-top:4px">' + t + '</div>'; };
+      var h = li('<b>' + (d.prueba && d.prueba.ok ? "✓ Conexión correcta." : "▲ La conexión falló.") + '</b> ' + esc(d.prueba ? d.prueba.mensaje : "No hay clave cargada."));
+      h += li("Clave: " + (c.presente ? "tomada de <b>" + esc(c.variable) + "</b>, " + c.largo + " caracteres, empieza con <code>" + esc(c.empieza) + "</code> y termina en <code>" + esc(c.termina) + "</code>" : "no hay ninguna cargada") + (c.se_limpio.length ? ". Se le quitaron " + esc(c.se_limpio.join(" y ")) + " (conviene corregirla en Render)" : "") + ".");
+      h += li("Modelo: <code>" + esc(d.modelo) + "</code> (" + esc(d.modelo_variable) + ").");
+      d.que_hacer.forEach(function(q){ h += li("<b>Qué hacer:</b> " + esc(q)); });
+      $("ia_diag").innerHTML = h;
+    }).catch(function(e){ $("ia_diag").innerHTML = '<div class="help">' + esc(e.message) + '</div>'; })
+      .then(function(){ bp.disabled = false; bp.textContent = "Probar la conexión con la IA"; });
+  };
   s.onchange = function(){ llamar("PUT", "/api/v1/portal/config", {ia_chat: s.value}).then(cargar).catch(function(e){ alert(e.message); }); };
   $("ia_log").ontoggle = function(){
     if (!$("ia_log").open) return;
