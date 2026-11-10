@@ -127,8 +127,53 @@ details.historial .hist{border-top:1px solid var(--line);margin-top:12px;padding
 details.historial .hist ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.5}
 details.historial .hist p{font-size:13.5px;margin:4px 0}
 .warnline{color:var(--warn)}
+.prio{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:9px;border:1px solid currentColor;margin-right:6px;vertical-align:1px;white-space:nowrap}
+.prio.alta{color:var(--bad)} .prio.media{color:var(--warn)} .prio.baja{color:var(--ink-3)}
+.sello{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-2)}
+.sello span b{color:var(--ink);font-weight:600}
+.sello .nota{flex-basis:100%;color:var(--ink-3);font-size:11.5px}
+.rev-it{border-top:1px solid var(--line);padding:10px 0}
+.rev-it .q{font-size:13.5px;font-weight:600;line-height:1.45}
+.rev-it .mot{font-size:13px;color:var(--ink-2);margin-top:2px}
+.rev-it textarea,.rev-it input[type=text]{width:100%;margin-top:6px;font-family:inherit;font-size:13px;line-height:1.45;padding:7px 9px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
+.rev-it textarea{min-height:54px;resize:vertical}
+.rev-dec{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.rev-dec button{font:600 12px/1 inherit;padding:6px 12px;border-radius:14px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);cursor:pointer}
+.rev-dec button[aria-pressed=true][data-dec=aprobada]{background:var(--ok);border-color:var(--ok);color:#fff}
+.rev-dec button[aria-pressed=true][data-dec=rechazada]{background:var(--bad);border-color:var(--bad);color:#fff}
+.rev-pie{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+table.cif{width:auto;font-size:12.5px;margin:4px 0 0}table.cif td,table.cif th{padding:3px 12px 3px 0;border:0;text-align:left;background:none}
+table.cif td.num{text-align:right}table.cif td{white-space:nowrap}table.cif td.ok{color:var(--ok)}
+ul.ents .cz{display:block;font-weight:400;font-size:11px;color:var(--ink-3);letter-spacing:.02em}
+/* Informe del Controller virtual: hoja aparte, solo para el administrador */
+#informe_ctl{position:fixed;inset:0;z-index:60;background:#eef2f7;overflow:auto;padding:18px 12px 40px}
+#informe_ctl .barra-inf{max-width:820px;margin:0 auto 12px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#informe_ctl .hoja{max-width:820px;margin:0 auto;background:#fff;color:#1b2a3d;padding:34px 40px;border:1px solid var(--line-2);border-radius:4px;font-size:13px;line-height:1.5}
+#informe_ctl h1{font-size:20px;margin:0 0 2px}#informe_ctl .sub{color:var(--ink-3);font-size:12px;margin-bottom:16px}
+#informe_ctl h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-deep);border-bottom:1px solid var(--line-2);padding-bottom:4px;margin:22px 0 8px}
+#informe_ctl table{width:100%;border-collapse:collapse;font-size:12.5px}
+#informe_ctl td,#informe_ctl th{padding:5px 8px 5px 0;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:normal;background:none}
+#informe_ctl code{overflow-wrap:anywhere;font-size:11.5px}
+#informe_ctl th{font-weight:600;color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+#informe_ctl td.num,#informe_ctl th.num{text-align:right;font-variant-numeric:tabular-nums}
+#informe_ctl table.dat td:first-child{width:230px;color:var(--ink-2)}
+#informe_ctl .hz{margin:0 0 12px;break-inside:avoid}#informe_ctl .hz p{margin:2px 0 4px}
+#informe_ctl .resp{margin:2px 0 10px;padding:6px 10px;border-left:3px solid var(--accent-soft);background:var(--surface-2);white-space:pre-wrap}
+#informe_ctl .resp.vacia{color:var(--ink-3);border-left-color:var(--line-2);background:none;font-style:italic}
+#informe_ctl .ok{color:var(--ok)}#informe_ctl .mal{color:var(--bad)}#informe_ctl .nt{color:var(--warn)}#informe_ctl b.ok,#informe_ctl b.mal,#informe_ctl span.nt{white-space:nowrap}
+#informe_ctl .criterio{color:var(--ink-2);font-size:12px}
+@media (max-width:640px){#informe_ctl .hoja{padding:20px 16px}#informe_ctl table.dat td:first-child{width:auto}}
+@page informe{size:A4 portrait;margin:14mm}
+@media print{
+  body.imp-informe #app,body.imp-informe #login,body.imp-informe .barra-inf{display:none!important}
+  body.imp-informe #informe_ctl{position:static;padding:0;background:#fff;overflow:visible;page:informe}
+  body.imp-informe #informe_ctl .hoja{border:0;padding:0;max-width:none}
+  #informe_ctl h2,#informe_ctl .resp{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  html{background:#fff}
+  #informe_ctl h2{break-after:avoid}#informe_ctl tr,#informe_ctl .hz{break-inside:avoid}#informe_ctl thead{display:table-header-group}
+}
 .panel.ia-admin{margin-top:16px}
-.lectura textarea{width:100%;min-height:210px;font:13px/1.5 inherit;padding:10px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink);resize:vertical}
+.lectura textarea{width:100%;min-height:210px;font-family:inherit;font-size:13px;line-height:1.5;padding:10px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink);resize:vertical}
 #ia_fab{position:fixed;right:20px;bottom:20px;z-index:40;background:var(--accent-deep);color:#fff;border:0;border-radius:24px;padding:12px 18px;font-weight:600;font-size:13.5px;cursor:pointer;box-shadow:0 6px 20px rgba(30,80,150,.35);display:flex;align-items:center;gap:8px}
 #ia_fab:hover{background:var(--accent)}
 #ia_fab svg{width:16px;height:16px}
@@ -325,6 +370,7 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
     <div id="ia_pie">Respuestas automáticas basadas solo en este informe; pueden contener errores. No son una recomendación. Verificá las cifras en las tablas.</div>
   </section>
 </div>
+<section id="informe_ctl" class="hidden" role="dialog" aria-label="Informe del Controller virtual"></section>
 
 <script>
 "use strict";
@@ -846,7 +892,9 @@ function md(t){
     var s = l.trim(); if (!s) return;
     var m = s.match(/^[-•*]\s+(.*)$/);
     var fmt = function(x){ return esc(x).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"); };
-    if (m) { if (!lista) { out.push("<ul>"); lista = true; } out.push("<li>" + fmt(m[1]) + "</li>"); }
+    var pr = m && m[1].match(/^\[(alta|media|baja)\]\s*(.*)$/i);      // "- [alta] **Título.** detalle" → etiqueta de prioridad
+    if (pr) { if (!lista) { out.push("<ul>"); lista = true; } out.push('<li><span class="prio ' + pr[1].toLowerCase() + '">Prioridad ' + pr[1].toLowerCase() + '</span>' + fmt(pr[2]) + "</li>"); }
+    else if (m) { if (!lista) { out.push("<ul>"); lista = true; } out.push("<li>" + fmt(m[1]) + "</li>"); }
     else { if (lista) { out.push("</ul>"); lista = false; } out.push(s.indexOf("## ") === 0 ? "<h4>" + esc(s.slice(3)) + "</h4>" : "<p>" + fmt(s) + "</p>"); }
   });
   if (lista) out.push("</ul>");
@@ -873,29 +921,123 @@ function panelLectura(){
     h += '<div class="acc">' + (ia.disponible ? '<button class="btn ghost" id="lec_generar">' + (r ? "Regenerar con IA" : "Generar con IA") + '</button>' : '') +
       '<button class="btn ghost" id="lec_editar">' + (r ? "Editar" : "Escribir a mano") + '</button>' +
       (r && !r.aprobado ? '<button class="btn" id="lec_aprobar">Aprobar y mostrar a accionistas</button>' : '') +
+      (r && r.diag ? '<button class="btn ghost" id="lec_informe">Informe del Controller</button>' : '') +
       '<button class="btn ghost" id="lec_probar">Probar la conexión con la IA</button></div><div id="lec_diag"></div>' +
+      (r ? selloLectura(r, true) : '') +
       '<div class="pie-ia">' + (r ? 'Generada ' + esc(r.generado) + (r.origen === "editado" ? ' · editada por ' + esc(r.editado_por || "") : ' con IA') + '. ' : '') + 'Publicar el informe también aprueba la lectura que ves acá.</div>';
   } else {
-    h += '<div class="pie-ia"><span class="chip-ia">IA</span> Redactada con inteligencia artificial a partir de las cifras de este informe y aprobada por el Gerente de Administración y Finanzas' + (r.aprobado_ts ? ' el ' + esc(dmy(r.aprobado_ts.slice(0,10))) + ' ' + esc(r.aprobado_ts.slice(11)) + ' h' : '') + '.</div>';
+    h += selloLectura(r, false);
   }
   h += '</div>';
   if (admin && r && r.diag) h += panelRevision(r);
   return h + historialLecturas();
 }
+// Sello corto de la supervisión: lo ven los accionistas (sin preguntas, acciones ni detalle de controles).
+function fechaHora(ts){ return ts ? dmy(ts.slice(0, 10)) + " " + ts.slice(11) + " h" : ""; }
+function selloLectura(r, admin){
+  var s = r.sello || {}, c = s.controles, firma = (D.ia && D.ia.firmante) || "Gerente de Administración y Finanzas", it = [];
+  if (s.con_ia && s.cifras_citadas) it.push('<span>' + (s.cifras_verificadas === s.cifras_citadas ? "✓" : "▲") + ' Cifras verificadas contra el informe: <b>' + s.cifras_verificadas + ' de ' + s.cifras_citadas + '</b>' + (s.editado ? " (en el borrador de IA)" : "") + '</span>');
+  if (c && c.total) it.push('<span>Controles automáticos: <b>' + c.total + '</b> · ' + c.ok + ' sin observaciones' + (c.nota ? ' · ' + c.nota + ' con nota' : '') + (c.alerta ? ' · ' + c.alerta + ' en alerta' : '') + '</span>');
+  if (admin ? r.aprobado : true) it.push('<span>Aprobada por <b>' + esc(firma) + '</b>' + (r.aprobado_ts ? ' el ' + esc(fechaHora(r.aprobado_ts)) : '') + '</span>');
+  else if (admin) it.push('<span>Todavía sin aprobar</span>');
+  var nota = !s.con_ia ? 'Escrita por ' + esc(firma) + ' a partir de las cifras de este informe.'
+    : 'Redactada con inteligencia artificial a partir de las cifras de este informe' + (s.editado ? ' y editada por ' + esc(firma) + ' antes de aprobarla' : '') + '. Los controles los corre el sistema, sin IA.';
+  return '<div class="sello">' + it.join("") + '<span class="nota">' + nota + '</span></div>';
+}
+// Borrador de la revisión (respuestas y decisiones) mientras el Gerente escribe; se guarda con "Guardar revisión" o al aprobar.
+var rev = {sid: null, nq: null, ts: null, respuestas: [], acciones: [], sucio: false}, infGuardo = false;
+function revisionDe(r){
+  var R = r.revision || {respuestas: [], acciones: []};
+  var nq = ((r.diag || {}).preguntas_para_humano || []).join("|") + "#" + ((r.diag || {}).acciones_sugeridas || []).length;      // si se regeneró, las preguntas son otras
+  if (rev.sid !== r.snapshot_id || rev.nq !== nq || (!rev.sucio && rev.ts !== (R.ts || ""))) {
+    rev = {sid: r.snapshot_id, nq: nq, ts: R.ts || "", sucio: false, respuestas: (R.respuestas || []).slice(),
+           acciones: (R.acciones || []).map(function(a){ return {decision: a.decision || null, nota: a.nota || ""}; })};
+  }
+  return rev;
+}
+function revPendientes(){ return rev.respuestas.filter(function(x){ return !String(x || "").trim(); }).length + rev.acciones.filter(function(a){ return !a.decision; }).length; }
+function revEstado(){
+  var n = revPendientes(), e = $("rev_estado"); if (!e) return;
+  e.textContent = (rev.sucio ? "Cambios sin guardar. " : "") + (n ? "Falta responder o decidir " + n + (n === 1 ? " punto." : " puntos.") : "Todo respondido y decidido.");
+}
 function panelRevision(r){
-  var d = r.diag, v = d.verificacion || {}, ico = {ok: "●", alerta: "▲", info: "■"}, txt = {ok: "Bien", alerta: "Alerta", info: "Nota"};
-  var h = '<details class="panel revision"' + (r.aprobado ? "" : " open") + '><summary><b>Para tu revisión antes de aprobar</b> · cifras verificadas ' + (v.cifras_verificadas || 0) + ' de ' + (v.cifras_citadas || 0) + '</summary>';
+  var d = r.diag, v = d.verificacion || {}, ico = {ok: "●", alerta: "▲", info: "■"}, txt = {ok: "Bien", alerta: "Alerta", info: "Nota"}, B = revisionDe(r);
+  var C = d.controles || [], nal = C.filter(function(c){ return c.estado === "alerta"; }).length, npen = revPendientes();
+  var h = '<details class="panel revision" id="revision"' + (r.aprobado && !npen ? "" : " open") + '><summary><b>Tu revisión como responsable</b> · cifras verificadas ' + (v.cifras_verificadas || 0) + ' de ' + (v.cifras_citadas || 0) +
+    ' · ' + C.length + ' controles' + (nal ? ', ' + nal + ' en alerta' : '') + (npen ? ' · ' + npen + (npen === 1 ? ' punto' : ' puntos') + ' sin responder' : '') + '</summary>';
   if (v.no_verificadas && v.no_verificadas.length) h += '<p class="help warnline">Cifras que el agente citó y no coinciden con el informe (revisalas o editá el texto): ' + v.no_verificadas.map(function(x){ return esc(x.hallazgo || "") + ' (' + esc(x.clave) + ': citó ' + esc(x.valor_citado) + ', informe ' + esc(x.valor_informe == null ? "s/d" : x.valor_informe) + ')'; }).join("; ") + '.</p>';
-  h += '<h4>Controles de consistencia (sin IA)</h4><ul class="ents">' + (d.controles || []).map(function(c){ return '<li class="' + (c.estado === "alerta" ? "falta" : c.estado === "info" ? "atencion" : "ok") + '"><span class="ent">' + ico[c.estado] + ' ' + txt[c.estado] + '</span><span class="nm">' + esc(c.nombre) + '</span><span class="dt">' + esc(c.detalle) + '</span></li>'; }).join("") + '</ul>';
-  if ((d.preguntas_para_humano || []).length) h += '<h4>Preguntas del agente para vos</h4><ul>' + d.preguntas_para_humano.map(function(q){ return '<li>' + esc(q) + '</li>'; }).join("") + '</ul>';
-  if ((d.acciones_sugeridas || []).length) h += '<h4>Acciones sugeridas (solo para vos; los accionistas no las ven)</h4><ul>' + d.acciones_sugeridas.map(function(a){ return '<li><b>' + esc(a.accion) + '</b> — ' + esc(a.motivo || "") + (a.prioridad ? ' <span class="chip-ia">' + esc(a.prioridad) + '</span>' : '') + '</li>'; }).join("") + '</ul>';
+  if ((d.hallazgos || []).length) h += '<h4>Hallazgos y cifras citadas</h4>' + d.hallazgos.map(function(x){
+    var cs = x.cifras || [];
+    return '<div class="rev-it"><div class="q"><span class="prio ' + esc(x.severidad || "media") + '">Prioridad ' + esc(x.severidad || "media") + '</span>' + esc(x.titulo || "") + '</div>' +
+      (cs.length ? '<div class="scrollx"><table class="cif"><tbody>' + cs.map(function(c){ return '<tr><td><code>' + esc(c.clave) + '</code></td><td class="num">citó ' + esc(numCif(c.valor)) + '</td><td class="num">informe ' + esc(c.valor_informe == null ? "s/d" : numCif(c.valor_informe)) + '</td><td class="' + (c.verificado ? "ok" : "neg") + '">' + (c.verificado ? "✓ coincide" : "✗ no coincide") + '</td></tr>'; }).join("") + '</tbody></table></div>' : '<div class="mot">Sin cifras citadas.</div>') + '</div>'; }).join("");
+  h += '<h4>Controles de consistencia entre módulos (sin IA)</h4><ul class="ents">' + C.map(function(c){ return '<li class="' + (c.estado === "alerta" ? "falta" : c.estado === "info" ? "atencion" : "ok") + '"><span class="ent">' + ico[c.estado] + ' ' + txt[c.estado] + '</span><span class="nm">' + esc(c.nombre) + (c.cruce ? '<span class="cz">' + esc(c.cruce) + '</span>' : '') + '</span><span class="dt">' + esc(c.detalle) + '</span></li>'; }).join("") + '</ul>';
+  var Q = d.preguntas_para_humano || [], A = d.acciones_sugeridas || [];
+  if (Q.length) h += '<h4>Preguntas del agente y tu respuesta</h4>' + Q.map(function(q, i){
+    return '<div class="rev-it"><label class="q" for="rev_q' + i + '">' + esc(q) + '</label><textarea id="rev_q' + i + '" data-resp="' + i + '" maxlength="800" placeholder="Tu respuesta (queda en el registro; los accionistas no la ven)">' + esc(B.respuestas[i] || "") + '</textarea></div>'; }).join("");
+  if (A.length) h += '<h4>Acciones sugeridas y tu decisión</h4>' + A.map(function(a, i){
+    var x = B.acciones[i] || {decision: null, nota: ""};
+    return '<div class="rev-it"><div class="q">' + (a.prioridad ? '<span class="prio ' + esc(a.prioridad) + '">Prioridad ' + esc(a.prioridad) + '</span>' : '') + esc(a.accion) + '</div><div class="mot">' + esc(a.motivo || "") + '</div>' +
+      '<div class="rev-dec" role="group" aria-label="Decisión"><button type="button" data-acc="' + i + '" data-dec="aprobada" aria-pressed="' + (x.decision === "aprobada") + '">✓ Aprobar</button><button type="button" data-acc="' + i + '" data-dec="rechazada" aria-pressed="' + (x.decision === "rechazada") + '">✗ Rechazar</button></div>' +
+      '<input type="text" data-nota="' + i + '" maxlength="800" aria-label="Comentario sobre la acción" placeholder="Comentario (opcional)" value="' + esc(x.nota || "") + '"></div>'; }).join("");
+  if (Q.length || A.length) h += '<div class="rev-pie"><button class="btn" id="rev_guardar">Guardar revisión</button><span class="help" id="rev_estado" style="margin:0"></span></div>' +
+    '<p class="help">Las preguntas, tus respuestas, las acciones y tus decisiones quedan en el Informe del Controller. Los accionistas ven solo la lectura aprobada y el sello.' + (r.revision && r.revision.ts ? ' Última revisión guardada: ' + esc(fechaHora(r.revision.ts)) + (r.revision.por ? ' por ' + esc(r.revision.por) : '') + '.' : '') + '</p>';
   return h + '</details>';
+}
+function numCif(x){ return typeof x === "number" ? NF1.format(x) : String(x); }
+function guardarRevision(){
+  return llamar("PUT", "/api/v1/portal/resumen-ia/revision", {snapshot_id: rev.sid, respuestas: rev.respuestas, acciones: rev.acciones}).then(function(j){ rev.sucio = false; return j; });
+}
+/* ---------- Informe del Controller virtual (solo administrador; hoja para imprimir o guardar como PDF) ---------- */
+function informeController(sid){
+  infGuardo = rev.sucio && rev.sid === sid;
+  var antes = infGuardo ? guardarRevision() : Promise.resolve();
+  return antes.then(function(){ return llamar("GET", "/api/v1/portal/resumen-ia/informe?snapshot_id=" + encodeURIComponent(sid)); }).then(function(j){
+    var c = $("informe_ctl");
+    c.innerHTML = '<div class="barra-inf"><button class="btn" id="inf_imprimir">Imprimir o guardar como PDF</button><button class="btn ghost" id="inf_cerrar">Cerrar</button></div>' + informeHTML(j);
+    c.classList.remove("hidden"); document.body.classList.add("imp-informe"); c.scrollTop = 0;
+    $("inf_imprimir").onclick = function(){ window.print(); };
+    $("inf_cerrar").onclick = cerrarInforme; $("inf_cerrar").focus();
+  });
+}
+function cerrarInforme(){ $("informe_ctl").classList.add("hidden"); $("informe_ctl").innerHTML = ""; document.body.classList.remove("imp-informe"); if (infGuardo) { infGuardo = false; cargar(); } }
+function informeHTML(j){
+  var r = j.lectura, d = r.diag || {}, v = d.verificacion || {}, C = d.controles || [], R = r.revision || {respuestas: [], acciones: []};
+  var EST = {sano: "Sano", ajustado: "Ajustado", preocupante: "Preocupante"}, TX = {ok: ["Bien", "ok"], alerta: ["Alerta", "mal"], info: ["Nota", "nt"]};
+  var nal = C.filter(function(c){ return c.estado === "alerta"; }).length, fila = function(a, b){ return '<tr><td>' + a + '</td><td><b>' + b + '</b></td></tr>'; };
+  var h = '<div class="hoja"><h1>Informe del Controller virtual</h1><div class="sub">' + esc(j.empresa) + ' · FINETIA · Registro de la supervisión de la lectura del informe financiero. Uso interno: no se distribuye a accionistas.</div>';
+  h += '<h2>Datos del informe</h2><table class="dat"><tbody>' + fila("Empresa", esc(j.empresa)) + fila("Fecha del informe financiero", r.fecha_informe ? esc(dmy(r.fecha_informe)) : "s/d") +
+    fila("Lectura generada", esc(fechaHora(r.generado))) + fila("Estado de la lectura", r.aprobado ? "Aprobada" : "Borrador, sin aprobar") +
+    fila("Fecha de aprobación", r.aprobado ? esc(fechaHora(r.aprobado_ts)) : "—") + fila("Aprobado por", r.aprobado ? esc(j.firmante) + ' (usuario ' + esc(r.aprobado_por || "") + ')' : "—") +
+    fila("Estado general", EST[r.estado_general] || "s/d") + fila("Cifras citadas verificadas", (v.cifras_verificadas || 0) + " de " + (v.cifras_citadas || 0)) +
+    fila("Controles en alerta", nal + " de " + C.length) + fila("Diagnóstico editado por la persona", r.origen === "editado" ? "Sí, por " + esc(r.editado_por || "") : "No") +
+    fila("Modelo de IA", d.modelo ? esc(d.modelo) : "s/d") + '</tbody></table>';
+  h += '<h2>' + (r.aprobado ? "Diagnóstico aprobado" : "Diagnóstico (borrador)") + '</h2><p>' + esc(d.diagnostico || "") + '</p>';
+  if (r.origen === "editado") h += '<p class="criterio">El texto que ven los accionistas fue editado después de generarse. Texto vigente:</p><div class="resp">' + esc(r.texto) + '</div>';
+  h += '<h2>Hallazgos con prioridad y verificación de cifras</h2>' + ((d.hallazgos || []).length ? d.hallazgos.map(function(x, i){
+    var cs = x.cifras || [];
+    return '<div class="hz"><b>' + (i + 1) + '. [' + esc(x.severidad || "media") + '] ' + esc(x.titulo || "") + '</b><p>' + esc(x.detalle || "") + '</p>' +
+      (cs.length ? '<table><thead><tr><th>Cifra (clave del informe)</th><th class="num">Citada</th><th class="num">En el informe</th><th>Verificación</th></tr></thead><tbody>' + cs.map(function(c){
+        return '<tr><td><code>' + esc(c.clave) + '</code></td><td class="num">' + esc(numCif(c.valor)) + '</td><td class="num">' + esc(c.valor_informe == null ? "s/d" : numCif(c.valor_informe)) + '</td><td class="' + (c.verificado ? "ok" : "mal") + '">' + (c.verificado ? "✓ Verificada" : "✗ No coincide") + '</td></tr>'; }).join("") + '</tbody></table>' : '') + '</div>'; }).join("") : '<p>Sin hallazgos.</p>');
+  h += '<h2>Controles de consistencia entre módulos (' + C.length + ', sin IA)</h2><table><thead><tr><th>Resultado</th><th>Control</th><th>Módulos</th><th>Detalle</th></tr></thead><tbody>' + C.map(function(c){
+    var t = TX[c.estado] || TX.info; return '<tr><td class="' + t[1] + '"><b>' + t[0] + '</b></td><td>' + esc(c.nombre) + '</td><td>' + esc(c.cruce || "") + '</td><td>' + esc(c.detalle) + '</td></tr>'; }).join("") + '</tbody></table>';
+  var Q = d.preguntas_para_humano || [], A = d.acciones_sugeridas || [];
+  h += '<h2>Preguntas de la IA y respuestas de la persona</h2>' + (Q.length ? Q.map(function(q, i){ var a = String((R.respuestas || [])[i] || "").trim();
+    return '<div class="hz"><b>' + (i + 1) + '. ' + esc(q) + '</b><div class="resp' + (a ? "" : " vacia") + '">' + (a ? esc(a) : "Sin responder") + '</div></div>'; }).join("") : '<p>El agente no hizo preguntas.</p>');
+  h += '<h2>Acciones sugeridas y decisión</h2>' + (A.length ? '<table><thead><tr><th>Acción sugerida por la IA</th><th>Prioridad</th><th>Decisión</th><th>Comentario</th></tr></thead><tbody>' + A.map(function(a, i){
+    var x = (R.acciones || [])[i] || {}, dec = x.decision === "aprobada" ? '<b class="ok">✓ Aprobada</b>' : x.decision === "rechazada" ? '<b class="mal">✗ Rechazada</b>' : '<span class="nt">Sin decidir</span>';
+    return '<tr><td><b>' + esc(a.accion) + '</b><br>' + esc(a.motivo || "") + '</td><td>' + esc(a.prioridad || "") + '</td><td>' + dec + '</td><td>' + esc(x.nota || "") + '</td></tr>'; }).join("") + '</tbody></table>' : '<p>El agente no sugirió acciones.</p>');
+  if (R.ts) h += '<p class="criterio">Revisión registrada el ' + esc(fechaHora(R.ts)) + (R.por ? ' por el usuario ' + esc(R.por) : '') + '.</p>';
+  h += '<h2>Criterio de supervisión</h2><p class="criterio">Las cifras las calcula el sistema a partir de los archivos de Tesorería, bancos, Tango y ARCA; la IA solo redacta. El agente no puede usar números que no estén en las métricas del informe: cada cifra que cita se compara con el valor calculado (tolerancia de 0,5 % o $ 0,1 M) y queda marcada como verificada o no. ' +
+    'Los controles de consistencia los corre el sistema, sin IA, y con un control en alerta el agente no puede declarar la situación como sana. Las acciones son sugerencias: ninguna se ejecuta sola. ' +
+    'La lectura llega a los accionistas recién cuando el responsable la aprueba; ellos ven el texto aprobado y un sello con las cifras verificadas y los controles, pero no las preguntas, las respuestas, las acciones ni este informe.</p></div>';
+  return h;
 }
 function historialLecturas(){
   var H = (D.ia && D.ia.historial) || []; if (!H.length) return "";
   var E = {sano: "sana", ajustado: "ajustada", preocupante: "preocupante"};
   return '<details class="panel historial"><summary><b>Lecturas anteriores</b> · ' + H.length + (H.length === 1 ? " aprobada" : " aprobadas") + '</summary>' + H.map(function(x){
-    return '<div class="hist"><h4>' + esc(x.fecha_informe ? dmy(x.fecha_informe) : "Informe") + (x.estado_general ? ' · situación ' + E[x.estado_general] : "") + '</h4>' + md(x.texto) + '</div>'; }).join("") +
+    return '<div class="hist"><h4>' + esc(x.fecha_informe ? dmy(x.fecha_informe) : "Informe") + (x.estado_general ? ' · situación ' + E[x.estado_general] : "") + '</h4>' + md(x.texto) +
+      (D.publicacion.rol === "admin" && x.con_ia ? '<button class="enlace" data-informe="' + x.snapshot_id + '" style="margin:4px 0 0">Ver el Informe del Controller de esta lectura</button>' : '') + '</div>'; }).join("") +
     '<p class="help">Lecturas aprobadas en su momento; las cifras corresponden a la fecha de cada informe.</p></details>';
 }
 var editandoLectura = false;
@@ -906,6 +1048,8 @@ function accionesLectura(){
   var bg = $("lec_generar"), bpr = $("lec_probar");
   if (bpr) bpr.onclick = function(){ probarIA(bpr, $("lec_diag")); };
   if (bg) bg.onclick = function(){
+    var hay = rev.sid === sid && (rev.sucio || rev.respuestas.some(function(x){ return String(x || "").trim(); }) || rev.acciones.some(function(a){ return a.decision; }));
+    if (hay && !confirm("Regenerar reemplaza la lectura y borra las respuestas y decisiones que cargaste para esta. ¿Seguir?")) return;
     var rot = bg.textContent; bg.disabled = true; bg.textContent = "Generando… (puede tardar hasta un minuto)"; $("lec_diag").innerHTML = "";
     llamar("POST", "/api/v1/portal/resumen-ia/generar", {}).then(ok).catch(function(e){
       // el error queda a la vista en la tarjeta y se corre sola la prueba de conexión para mostrar el motivo
@@ -916,8 +1060,19 @@ function accionesLectura(){
   };
   if ((b = $("lec_editar"))) b.onclick = function(){ editandoLectura = true; pintar(); };
   if ((b = $("lec_cancelar"))) b.onclick = function(){ editandoLectura = false; pintar(); };
-  if ((b = $("lec_guardar"))) b.onclick = function(){ llamar("PUT", "/api/v1/portal/resumen-ia", {snapshot_id: sid, texto: $("lec_txt").value}).then(ok).catch(mal); };
-  if ((b = $("lec_aprobar"))) b.onclick = function(){ llamar("POST", "/api/v1/portal/resumen-ia/aprobar", {snapshot_id: sid}).then(ok).catch(mal); };
+  if ((b = $("lec_guardar"))) b.onclick = function(){
+    var antes = (rev.sucio && rev.sid === sid) ? guardarRevision() : Promise.resolve();      // editar el texto no pierde lo que ya respondiste
+    antes.then(function(){ return llamar("PUT", "/api/v1/portal/resumen-ia", {snapshot_id: sid, texto: $("lec_txt").value}); }).then(ok).catch(mal);
+  };
+  if ((b = $("lec_aprobar"))) b.onclick = function(){
+    var n = rev.sid === sid ? revPendientes() : 0;
+    if (n && !confirm("Falta responder o decidir " + n + (n === 1 ? " punto" : " puntos") + " de tu revisión. Va a quedar así en el Informe del Controller. ¿Aprobar igual?")) return;
+    var cuerpo = {snapshot_id: sid}; if (rev.sid === sid) { cuerpo.respuestas = rev.respuestas; cuerpo.acciones = rev.acciones; }
+    llamar("POST", "/api/v1/portal/resumen-ia/aprobar", cuerpo).then(function(){ rev.sucio = false; ok(); }).catch(mal);
+  };
+  if ((b = $("lec_informe"))) b.onclick = function(){ informeController(sid).catch(mal); };
+  if ((b = $("rev_guardar"))) b.onclick = function(){ b.disabled = true; guardarRevision().then(ok).catch(function(e){ b.disabled = false; alert(e.message); }); };
+  revEstado();
 }
 function probarIA(boton, destino, previo){
   var rotulo = "Probar la conexión con la IA";
@@ -938,6 +1093,7 @@ function panelIAAdmin(){
   return '<div class="panel ia-admin"><h3>Asistente de IA · administración</h3>' +
     '<div class="barra"><label for="ia_modo" style="margin:0">Botón “Preguntale al informe”:</label><select id="ia_modo">' + op("apagado", "Apagado para todos") + op("admin", "Solo para mí (prueba)") + op("accionistas", "Habilitado para accionistas") + '</select></div>' +
     '<p class="help">' + (ia.disponible ? 'IA conectada.' : 'IA sin conectar: falta ANTHROPIC_API_KEY en Render.') + ' Límite: ' + ia.limite_accionista + ' preguntas por día por accionista (' + ia.limite_diario + ' para vos). Los accionistas solo consultan el informe publicado.</p>' +
+    '<div class="barra" style="margin:8px 0"><label for="ia_firma" style="margin:0">Quién firma la lectura (lo ven los accionistas):</label><input id="ia_firma" type="text" maxlength="80" style="flex:1;min-width:220px;padding:6px 9px;border:1px solid var(--line-2);border-radius:6px;font:inherit" value="' + esc(ia.firmante || "") + '"><button class="btn ghost" id="ia_firma_ok">Guardar</button></div>' +
     '<div class="barra" style="margin:8px 0"><button class="btn ghost" id="ia_probar">Probar la conexión con la IA</button></div><div id="ia_diag"></div>' +
     '<details id="ia_log"><summary>Ver preguntas recientes</summary><div id="ia_log_c" class="help">Cargando…</div></details></div>';
 }
@@ -945,6 +1101,7 @@ function accionesIAAdmin(){
   var s = $("ia_modo"); if (!s) return;
   var bp = $("ia_probar");
   if (bp) bp.onclick = function(){ probarIA(bp, $("ia_diag")); };
+  var bf = $("ia_firma_ok"); if (bf) bf.onclick = function(){ llamar("PUT", "/api/v1/portal/config", {firmante: $("ia_firma").value}).then(cargar).catch(function(e){ alert(e.message); }); };
   s.onchange = function(){ llamar("PUT", "/api/v1/portal/config", {ia_chat: s.value}).then(cargar).catch(function(e){ alert(e.message); }); };
   $("ia_log").ontoggle = function(){
     if (!$("ia_log").open) return;
@@ -1003,7 +1160,20 @@ $("vista").addEventListener("click", function(ev){
   if (b.hasAttribute("data-ir")) { tab = b.getAttribute("data-ir"); marcarTab(); store.set("gp_tab", tab); pintar(); window.scrollTo(0, 0); }
   else if (b.hasAttribute("data-ent")) { ent = b.getAttribute("data-ent"); pintar(); }
   else if (b.hasAttribute("data-c")) { cumpl = +b.getAttribute("data-c") / 100; pintar(); }
+  else if (b.hasAttribute("data-dec")) {                      // decisión por acción: se puede destildar volviendo a tocar
+    var i = +b.getAttribute("data-acc"), dec = b.getAttribute("data-dec"), a = rev.acciones[i] || (rev.acciones[i] = {decision: null, nota: ""});
+    a.decision = a.decision === dec ? null : dec; rev.sucio = true;
+    b.parentNode.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", String(x.getAttribute("data-dec") === a.decision)); });
+    revEstado();
+  }
+  else if (b.hasAttribute("data-informe")) informeController(+b.getAttribute("data-informe")).catch(function(e){ alert(e.message); });
 });
+$("vista").addEventListener("input", function(ev){
+  var t = ev.target;
+  if (t.hasAttribute("data-resp")) { rev.respuestas[+t.getAttribute("data-resp")] = t.value; rev.sucio = true; revEstado(); }
+  else if (t.hasAttribute("data-nota")) { var i = +t.getAttribute("data-nota"); (rev.acciones[i] || (rev.acciones[i] = {decision: null, nota: ""})).nota = t.value; rev.sucio = true; revEstado(); }
+});
+document.addEventListener("keydown", function(ev){ if (ev.key === "Escape" && !$("informe_ctl").classList.contains("hidden")) cerrarInforme(); });
 $("vista").addEventListener("input", function(ev){ if (ev.target.id === "rng") { cumpl = +ev.target.value / 100; pintar(); var r = $("rng"); if (r) r.focus(); } });
 (function(){ var t = store.get("gp_tab"); if (t && document.querySelector('nav.tabs button[data-tab="' + t + '"]')) { tab = t; marcarTab(); } })();
 cargar();
