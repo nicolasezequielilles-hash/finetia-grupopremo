@@ -799,7 +799,8 @@ function panelLectura(){
   if (admin) {
     h += '<div class="acc">' + (ia.disponible ? '<button class="btn ghost" id="lec_generar">' + (r ? "Regenerar con IA" : "Generar con IA") + '</button>' : '') +
       '<button class="btn ghost" id="lec_editar">' + (r ? "Editar" : "Escribir a mano") + '</button>' +
-      (r && !r.aprobado ? '<button class="btn" id="lec_aprobar">Aprobar y mostrar a accionistas</button>' : '') + '</div>' +
+      (r && !r.aprobado ? '<button class="btn" id="lec_aprobar">Aprobar y mostrar a accionistas</button>' : '') +
+      '<button class="btn ghost" id="lec_probar">Probar la conexión con la IA</button></div><div id="lec_diag"></div>' +
       '<div class="pie-ia">' + (r ? 'Generada ' + esc(r.generado) + (r.origen === "editado" ? ' · editada por ' + esc(r.editado_por || "") : ' con IA') + '. ' : '') + 'Publicar el informe también aprueba la lectura que ves acá.</div>';
   } else {
     h += '<div class="pie-ia"><span class="chip-ia">IA</span> Redactada con inteligencia artificial a partir de las cifras de este informe y aprobada por el Gerente de Administración y Finanzas' + (r.aprobado_ts ? ' el ' + esc(dmy(r.aprobado_ts.slice(0,10))) + ' ' + esc(r.aprobado_ts.slice(11)) + ' h' : '') + '.</div>';
@@ -828,11 +829,34 @@ var editandoLectura = false;
 function accionesLectura(){
   var sid = D.publicacion.mostrado_id, ok = function(){ editandoLectura = false; cargar(); }, mal = function(e){ alert(e.message); pintar(); };
   var b;
-  if ((b = $("lec_generar"))) b.onclick = function(){ b.disabled = true; b.textContent = "Generando…"; llamar("POST", "/api/v1/portal/resumen-ia/generar", {}).then(ok).catch(mal); };
+  var bg = $("lec_generar"), bpr = $("lec_probar");
+  if (bpr) bpr.onclick = function(){ probarIA(bpr, $("lec_diag")); };
+  if (bg) bg.onclick = function(){
+    var rot = bg.textContent; bg.disabled = true; bg.textContent = "Generando… (puede tardar hasta un minuto)"; $("lec_diag").innerHTML = "";
+    llamar("POST", "/api/v1/portal/resumen-ia/generar", {}).then(ok).catch(function(e){
+      // el error queda a la vista en la tarjeta y se corre sola la prueba de conexión para mostrar el motivo
+      bg.disabled = false; bg.textContent = rot;
+      var aviso = '<div class="help warnline" style="margin-top:8px"><b>' + esc(e.message) + '</b></div>';
+      if (bpr) probarIA(bpr, $("lec_diag"), aviso); else $("lec_diag").innerHTML = aviso;
+    });
+  };
   if ((b = $("lec_editar"))) b.onclick = function(){ editandoLectura = true; pintar(); };
   if ((b = $("lec_cancelar"))) b.onclick = function(){ editandoLectura = false; pintar(); };
   if ((b = $("lec_guardar"))) b.onclick = function(){ llamar("PUT", "/api/v1/portal/resumen-ia", {snapshot_id: sid, texto: $("lec_txt").value}).then(ok).catch(mal); };
   if ((b = $("lec_aprobar"))) b.onclick = function(){ llamar("POST", "/api/v1/portal/resumen-ia/aprobar", {snapshot_id: sid}).then(ok).catch(mal); };
+}
+function probarIA(boton, destino, previo){
+  var rotulo = "Probar la conexión con la IA";
+  boton.disabled = true; boton.textContent = "Probando…"; destino.innerHTML = previo || "";
+  return llamar("GET", "/api/v1/portal/ia/diagnostico").then(function(d){
+    var c = d.clave, li = function(t){ return '<div class="help" style="margin-top:4px">' + t + '</div>'; };
+    var h = (previo || "") + li('<b>' + (d.prueba && d.prueba.ok ? "✓ Conexión correcta." : "▲ La conexión falló.") + '</b> ' + esc(d.prueba ? d.prueba.mensaje : "No hay clave cargada."));
+    h += li("Clave: " + (c.presente ? "tomada de <b>" + esc(c.variable) + "</b>, " + c.largo + " caracteres, empieza con <code>" + esc(c.empieza) + "</code> y termina en <code>" + esc(c.termina) + "</code>" : "no hay ninguna cargada") + (c.se_limpio.length ? ". Se le quitaron " + esc(c.se_limpio.join(" y ")) + " (conviene corregirla en Render)" : "") + ".");
+    h += li("Modelo: <code>" + esc(d.modelo) + "</code> (" + esc(d.modelo_variable) + ").");
+    d.que_hacer.forEach(function(q){ h += li("<b>Qué hacer:</b> " + esc(q)); });
+    destino.innerHTML = h;
+  }).catch(function(e){ destino.innerHTML = (previo || "") + '<div class="help">' + (/not found/i.test(e.message) ? "<b>Falta subir el backend nuevo a Render</b> (el servidor todavía no tiene la prueba de conexión). Subí <code>subir_backend.zip</code> al repositorio FINETIA y esperá a que quede Live." : "No pude hacer la prueba: " + esc(e.message)) + '</div>'; })
+    .then(function(){ boton.disabled = false; boton.textContent = rotulo; });
 }
 function panelIAAdmin(){
   var ia = D.ia || {}, m = ia.modo_chat || "admin";
@@ -846,18 +870,7 @@ function panelIAAdmin(){
 function accionesIAAdmin(){
   var s = $("ia_modo"); if (!s) return;
   var bp = $("ia_probar");
-  if (bp) bp.onclick = function(){
-    bp.disabled = true; bp.textContent = "Probando…"; $("ia_diag").innerHTML = "";
-    llamar("GET", "/api/v1/portal/ia/diagnostico").then(function(d){
-      var c = d.clave, li = function(t){ return '<div class="help" style="margin-top:4px">' + t + '</div>'; };
-      var h = li('<b>' + (d.prueba && d.prueba.ok ? "✓ Conexión correcta." : "▲ La conexión falló.") + '</b> ' + esc(d.prueba ? d.prueba.mensaje : "No hay clave cargada."));
-      h += li("Clave: " + (c.presente ? "tomada de <b>" + esc(c.variable) + "</b>, " + c.largo + " caracteres, empieza con <code>" + esc(c.empieza) + "</code> y termina en <code>" + esc(c.termina) + "</code>" : "no hay ninguna cargada") + (c.se_limpio.length ? ". Se le quitaron " + esc(c.se_limpio.join(" y ")) + " (conviene corregirla en Render)" : "") + ".");
-      h += li("Modelo: <code>" + esc(d.modelo) + "</code> (" + esc(d.modelo_variable) + ").");
-      d.que_hacer.forEach(function(q){ h += li("<b>Qué hacer:</b> " + esc(q)); });
-      $("ia_diag").innerHTML = h;
-    }).catch(function(e){ $("ia_diag").innerHTML = '<div class="help">' + esc(e.message) + '</div>'; })
-      .then(function(){ bp.disabled = false; bp.textContent = "Probar la conexión con la IA"; });
-  };
+  if (bp) bp.onclick = function(){ probarIA(bp, $("ia_diag")); };
   s.onchange = function(){ llamar("PUT", "/api/v1/portal/config", {ia_chat: s.value}).then(cargar).catch(function(e){ alert(e.message); }); };
   $("ia_log").ontoggle = function(){
     if (!$("ia_log").open) return;
