@@ -515,10 +515,12 @@ function lineas(d, S, n){
   var g = function(k){ var v = (S && S[k]) ? S[k] : d[k]; return v.slice(0, n); };
   var cero = d.sueldos.map(function(){ return 0; });
   var L = {nof:(d.nof || cero).slice(0, n), cob_clientes:g("cob_clientes"), cob_echeq:g("cob_echeq"), cob_nuevas:g("cob_nuevas"), pag_cheques:d.pag_cheques.slice(0, n), pag_transf:d.pag_transf.slice(0, n), pag_estimado:d.pag_estimado.slice(0, n),
-           sueldos:d.sueldos.slice(0, n), impuestos:d.impuestos.slice(0, n), arca:d.arca.slice(0, n), financieros:d.financieros.slice(0, n)};
+           sueldos:d.sueldos.slice(0, n), impuestos:d.impuestos.slice(0, n), arca:d.arca.slice(0, n), financieros:d.financieros.slice(0, n),
+           fin_prestamos:(d.fin_prestamos || cero).slice(0, n), fin_echeqs:(d.fin_echeqs || cero).slice(0, n)};
   var tot = function(ks){ var o = []; for (var i = 0; i < n; i++) o.push(ks.reduce(function(a, k){ return a + L[k][i]; }, 0)); return o; };
   L.ingresos = tot(["cob_clientes","cob_echeq","cob_nuevas"]); L.oper = tot(["pag_cheques","pag_transf","pag_estimado","sueldos","nof"]); L.fiscal = tot(["impuestos","arca"]);
-  L.egresos = tot(["pag_cheques","pag_transf","pag_estimado","sueldos","nof","impuestos","arca","financieros"]); L.resultado = tot(["cob_clientes","cob_echeq","cob_nuevas","pag_cheques","pag_transf","pag_estimado","sueldos","nof","impuestos","arca","financieros"]);
+  L.financ = tot(["fin_prestamos","fin_echeqs","financieros"]);
+  L.egresos = tot(["pag_cheques","pag_transf","pag_estimado","sueldos","nof","impuestos","arca","financieros","fin_prestamos","fin_echeqs"]); L.resultado = tot(["cob_clientes","cob_echeq","cob_nuevas","pag_cheques","pag_transf","pag_estimado","sueldos","nof","impuestos","arca","financieros","fin_prestamos","fin_echeqs"]);
   L.posicion = (S && S.posicion ? S.posicion : d.posicion).slice(0, n); L.margen = (S && S.margen ? S.margen : d.margen).slice(0, n); L.certeza = (S && S.certeza ? S.certeza : d.certeza).slice(0, n);
   return L;
 }
@@ -533,7 +535,7 @@ function tablaFlujo(L, n, F, pos0){
   h += sec("Ingresos") + det("Cobranzas de clientes (cuentas a cobrar)", "cob_clientes", "c") + det("Echeqs de clientes en cartera", "cob_echeq", "c") + det("Cobranzas de ventas nuevas", "cob_nuevas", "") + sub("Total ingresos", "ingresos");
   h += sec("Egresos operativos") + det("Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + det("Proveedores: transferencias y cuenta corriente", "pag_transf", "c") + det("Proveedores: ritmo estimado de pagos", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
   h += sec("Egresos fiscales") + det("Impuestos y cargas sociales", "impuestos", "") + det("Planes de ARCA (regularización de cuotas)", "arca", "c") + sub("Total egresos fiscales", "fiscal");
-  h += sec("Egresos financieros") + det("Intereses, comisiones y débitos", "financieros", "");
+  h += sec("Egresos financieros") + det("Cuotas de préstamos bancarios", "fin_prestamos", "c") + det("Echeqs propios descontados que vencen", "fin_echeqs", "c") + det("Intereses bancarios, comisiones y débitos", "financieros", "") + sub("Total egresos financieros", "financ");
   h += '<tr class="res"><td>Resultado de la semana</td>' + L.resultado.map(function(v){ return cel(v); }).join("") + cel(SUMA(L.resultado)) + '</tr>';
   h += '<tr class="sub"><td>Saldo bancario final (posición)</td>' + L.posicion.map(function(v){ return cel(v, v < -F.acuerdo ? "bajo" : ""); }).join("") + '<td></td></tr>';
   h += '<tr><td>Margen disponible sobre acuerdos</td>' + L.margen.map(function(v){ return cel(v); }).join("") + '<td></td></tr>';
