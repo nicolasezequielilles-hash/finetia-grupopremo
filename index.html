@@ -78,6 +78,20 @@ main{padding:22px 0 56px}
 .banner.admin{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .banner.admin .acc{display:flex;gap:8px;flex-wrap:wrap}
 [hidden]{display:none!important}
+.duo{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:stretch;margin-bottom:16px}
+.duo>.panel{margin-bottom:0}
+.agc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.2fr);gap:18px;align-items:start}
+.agc .kpis{grid-template-columns:1fr;margin:0;gap:10px}
+.agc .kpi{padding:10px 14px}.agc .kpi .v{font-size:20px}
+.duo>*,.agc>*{min-width:0}
+@media (max-width:900px){.duo,.agc{grid-template-columns:minmax(0,1fr)}.agc .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
+ul.mirar{list-style:none;margin:0;padding:0}
+ul.mirar li{border-left:4px solid var(--accent-soft);padding:7px 0 7px 12px;margin:0 0 9px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+ul.mirar li.r{border-left-color:var(--bad)} ul.mirar li.w{border-left-color:var(--warn)}
+ul.mirar li b{display:block;color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
+.lectura .cuerpo.corta{max-height:118px;overflow:hidden;position:relative}
+.lectura .cuerpo.corta:after{content:"";position:absolute;left:0;right:0;bottom:0;height:46px;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--surface))}
+@media print{.lectura .cuerpo.corta{max-height:none}.lectura .cuerpo.corta:after{display:none}#lec_mas{display:none}}
 button.enlace{background:none;border:0;padding:0;margin-left:6px;color:var(--accent-deep);text-decoration:underline;cursor:pointer;font:inherit}
 table.ag td.wrapc{min-width:220px}.ag-ren{color:var(--ink-3)}
 .banner.admin .btn{padding:6px 14px;font-size:13px}
@@ -262,6 +276,8 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
   .panel,.kpi{box-shadow:none;break-inside:avoid}
   main{padding:8px 0}
 }
+/* celular: indicadores de a dos por fila (van al final para ganarle a las reglas generales) */
+@media (max-width:600px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:10px 12px}.kpi .v{font-size:18px}.kpis .kpi:last-child:nth-child(odd){grid-column:1/-1}.agc .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -452,8 +468,8 @@ function spark(v, color, w, h){
   var pts = v.map(function(x, i){ return (i / (v.length - 1) * (w - 4) + 2).toFixed(1) + "," + (h - 3 - (x - lo) / sp * (h - 6)).toFixed(1); }).join(" ");
   return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + " " + h + '" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 }
-function lineaPosicion(host, pos, acuerdo, semanas){
-  var W = host.clientWidth && host.clientWidth < 620 ? 360 : 1000, H = W < 700 ? 230 : 300, ml = W < 700 ? 50 : 62, mr = W < 700 ? 10 : 16, mt = 14, mb = 34, n = pos.length;
+function lineaPosicion(host, pos, acuerdo, semanas, alto){
+  var W = host.clientWidth && host.clientWidth < 620 ? 360 : 1000, H = W < 700 ? 230 : (alto || 300), ml = W < 700 ? 50 : 62, mr = W < 700 ? 10 : 16, mt = 14, mb = 34, n = pos.length;
   var lo = Math.min.apply(null, pos.concat([-acuerdo, 0])), hi = Math.max.apply(null, pos.concat([0]));
   var pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
   var x = function(i){ return ml + (W - ml - mr) * (n > 1 ? i / (n - 1) : .5); }, y = function(v){ return mt + (H - mt - mb) * (1 - (v - lo) / (hi - lo)); };
@@ -558,10 +574,10 @@ function titularEjecutivo(){
   var cuatro = d ? Math.min.apply(null, d.posicion.slice(0, 4)) : null;
   var h1 = rojo ? "El grupo superaría sus acuerdos bancarios desde la semana " + al.semana + " (" + dm(D.semanas[al.semana - 1].desde) + ")" : (al ? "El grupo opera con margen ajustado frente a sus acuerdos bancarios" : "La liquidez del grupo queda cubierta durante las próximas 13 semanas");
   var uso = F.acuerdo ? Math.max(0, -F.pos0) / F.acuerdo : 0;
-  var li = ['Hoy la posición bancaria es <b>' + MM(F.pos0) + '</b>' + (F.acuerdo ? ", " + pct(uso) + " de los acuerdos con bancos (" + MM(F.acuerdo) + ")" : "") + ".",
-    (cuatro !== null ? 'En las próximas 4 semanas el punto más bajo es <b>' + MM(cuatro) + '</b>' + (F.acuerdo ? (cuatro < -F.acuerdo ? ", por encima de los acuerdos." : ", dentro de los acuerdos.") : ".") : ""),
+  // Solo lo que no repiten los indicadores de abajo: el horizonte corto y cuánto falta (o sobra) frente a los acuerdos.
+  var li = [(cuatro !== null ? 'En las próximas 4 semanas el punto más bajo es <b>' + MM(cuatro) + '</b>' + (F.acuerdo ? (cuatro < -F.acuerdo ? ", por encima de los acuerdos con bancos (" + MM(F.acuerdo) + ")." : ", dentro de los acuerdos con bancos (" + MM(F.acuerdo) + ").") : ".") : ""),
     'A 13 semanas el mínimo es <b>' + MM(F.minimo) + '</b> en la semana ' + F.semana_minimo + (faltan > 0 ? "; faltarían <b>" + MM(faltan) + "</b> sobre los acuerdos." : "; sin superar los acuerdos."),
-    'Se estima cobrar <b>' + MM(F.cobranza) + '</b> y pagar <b>' + MM(-F.pagos) + '</b> en el trimestre; <b>' + pct(F.pct_cobranza_conocida) + '</b> de la cobranza ya está registrada.'].filter(Boolean);
+    '<b>' + pct(F.pct_cobranza_conocida) + '</b> de la cobranza del trimestre ya está registrada; el resto es estimación.'].filter(Boolean);
   var fila = function(e){ var ac = D.flujo[e].acuerdo, dsc = D.deuda.resumen[e].descubierto, p = ac ? dsc / ac : 0, c = p > 1 ? "b" : p > .8 ? "w" : "";
     return '<div class="fila"><div class="cab"><span>' + NOMBRE[e] + '</span><span class="num">' + MM(dsc) + ' de ' + MM(ac) + ' · <b>' + pct(p) + '</b></span></div><div class="riel"><i class="' + c + '" style="width:' + Math.min(100, p * 100).toFixed(1) + '%"></i></div></div>'; };
   return '<section class="hero"><div><div class="et">Situación del grupo</div><h2>' + h1 + '</h2><ul>' + li.map(function(x){ return '<li>' + x + '</li>'; }).join("") + '</ul></div>' +
@@ -577,20 +593,43 @@ function puntosAtencion(){
   if (!it.length) return "";
   return tituloSec("Puntos de atención") + '<div class="atencion">' + it.map(function(x){ return '<div class="it ' + x[0] + '"><b class="v num">' + x[1] + '</b><span>' + x[2] + '</span></div>'; }).join("") + '</div>';
 }
-function panelAgenda(){
+function panelAgenda(corta, quien){
   var A = D.agenda; if (!A) return "";
-  var its = A.items.filter(function(x){ return ent === "GRUPO" || x.emp === ent; });
-  var h = '<div class="panel"><h3>Próximos vencimientos financieros · ' + A.dias + ' días' + (ent === "GRUPO" ? "" : " · " + NOMBRE[ent]) + '</h3>';
+  var e = quien || ent, its = A.items.filter(function(x){ return e === "GRUPO" || x.emp === e; });
+  var h = '<div class="panel"><h3>Próximos vencimientos financieros · ' + A.dias + ' días' + (e === "GRUPO" ? "" : " · " + NOMBRE[e]) + '</h3>';
   if (!its.length) return h + '<div class="help">No hay vencimientos financieros cargados para los próximos ' + A.dias + ' días.</div></div>';
   var caja30 = 0, caja = 0, ren = 0, hoy = D.meta.hoy, lim = new Date(new Date(hoy + "T00:00:00").getTime() + 30 * 864e5).toISOString().slice(0, 10);
   its.forEach(function(x){ if (x.caja && x.fecha >= hoy) { caja += x.importe || 0; if (x.fecha <= lim) caja30 += x.importe || 0; } if (x.tipo === "Caución bursátil") ren += x.importe || 0; });
-  h += '<div class="kpis">' + kpi("A pagar en 30 días", MM(caja30), "cuotas de préstamos, echeqs y planes de ARCA", "") + kpi("A pagar en " + A.dias + " días", MM(caja), "sale de caja en su fecha", "") +
+  var kp = '<div class="kpis">' + kpi("A pagar en 30 días", MM(caja30), "cuotas de préstamos, echeqs y planes de ARCA", "") + kpi("A pagar en " + A.dias + " días", MM(caja), "sale de caja en su fecha", "") +
     kpi("Cauciones que se renuevan", MM(ren), ren ? "no salen de caja; dependen de la renovación" : "sin cauciones vigentes", ren ? "warn" : "") + '</div>';
-  h += '<div class="scrollx"><table class="tl ag"><thead><tr><th>Fecha</th><th class="n">Días</th><th>Vencimiento</th><th>Empresa</th><th class="n">Importe</th><th>Qué pasa ese día</th></tr></thead><tbody>' +
+  var fecha = function(x){ return x.estado === "renovada" ? "Vigente" : (x.tipo === "Planes de ARCA" ? "Sem. " + dmy(x.fecha).slice(0, 5) : dmy(x.fecha)); };
+  if (corta) {
+    var prox = its.filter(function(x){ return x.estado !== "renovada" && x.fecha >= hoy; }), ver = prox.slice(0, 5);
+    return h + '<div class="agc">' + kp + '<div><div class="scrollx"><table class="tl"><thead><tr><th>Fecha</th><th>Vencimiento</th><th>Empresa</th><th class="n">Importe</th></tr></thead><tbody>' +
+      ver.map(function(x){ return '<tr><td class="num">' + fecha(x) + '</td><td><b>' + esc(x.tipo) + '</b>' + (x.detalle && x.tipo !== "Planes de ARCA" ? ' <span style="color:var(--ink-3)">· ' + esc(x.detalle) + '</span>' : '') + '</td><td>' + (NOMBRE[x.emp] || x.emp) + '</td><td class="num">' + (x.importe === null || x.importe === undefined ? "—" : '<b>' + mm(x.importe) + '</b>') + '</td></tr>'; }).join("") +
+      '</tbody></table></div><button class="enlace" data-ir="deuda" style="margin:8px 0 0">Ver los ' + its.length + ' vencimientos y el detalle de la deuda</button></div></div></div>';
+  }
+  h += kp + '<div class="scrollx"><table class="tl ag"><thead><tr><th>Fecha</th><th class="n">Días</th><th>Vencimiento</th><th>Empresa</th><th class="n">Importe</th><th>Qué pasa ese día</th></tr></thead><tbody>' +
     its.map(function(x){ var ren_ = x.estado === "renovada";
-      return '<tr' + (ren_ ? ' class="ag-ren"' : '') + '><td class="num">' + (ren_ ? "Vigente" : (x.tipo === "Planes de ARCA" ? "Sem. " + dmy(x.fecha).slice(0, 5) : dmy(x.fecha))) + '</td><td class="num">' + (x.dias >= 0 && !ren_ ? x.dias : "—") + '</td><td><b>' + esc(x.tipo) + '</b>' + (x.detalle || ren_ ? '<br><span class="help" style="margin:0">' + esc(x.detalle) + (ren_ ? " · último vencimiento registrado " + dmy(x.fecha).slice(0, 5) : "") + '</span>' : '') + '</td><td>' + (NOMBRE[x.emp] || x.emp) + '</td><td class="num">' + (x.importe === null || x.importe === undefined ? "—" : '<b>' + mm(x.importe) + '</b>') + '</td><td class="wrapc">' + esc(x.nota || "") + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+      return '<tr' + (ren_ ? ' class="ag-ren"' : '') + '><td class="num">' + fecha(x) + '</td><td class="num">' + (x.dias >= 0 && !ren_ ? x.dias : "—") + '</td><td><b>' + esc(x.tipo) + '</b>' + (x.detalle || ren_ ? '<br><span class="help" style="margin:0">' + esc(x.detalle) + (ren_ ? " · último vencimiento registrado " + dmy(x.fecha).slice(0, 5) : "") + '</span>' : '') + '</td><td>' + (NOMBRE[x.emp] || x.emp) + '</td><td class="num">' + (x.importe === null || x.importe === undefined ? "—" : '<b>' + mm(x.importe) + '</b>') + '</td><td class="wrapc">' + esc(x.nota || "") + '</td></tr>'; }).join("") + '</tbody></table></div>' +
     '<div class="help">En millones de pesos. Solo deuda financiera y fiscal con fecha: cauciones, echeqs propios descontados, cuotas de préstamos, planes de ARCA y el certificado de no retención de IVA. Los pagos a proveedores y los sueldos están en el flujo de caja.</div></div>';
   return h;
+}
+// Lo que hay que mirar: las alertas de la entidad elegida y los importes vencidos, en una sola lista corta (antes estaban repartidos en dos bloques).
+function panelQueMirar(){
+  var F = D.flujo[ent], C = D.cobranzas.total, A = D.deuda.arca, P = D.deuda.proveedores, it = [];
+  D.alertas.filter(function(a){ return a.emp === ent; }).forEach(function(a){
+    var rojo = a.nivel === "rojo";
+    it.push([rojo ? "r" : "w", rojo ? "Faltan " + MM(-(a.peor + F.acuerdo)) : "Margen ajustado", esc(a.texto) + (a.peor !== undefined ? "; punto más bajo " + MM(a.peor) + " en la semana " + a.semanaPeor : "")]); });
+  if (ent === "GRUPO") D.alertas.filter(function(a){ return a.emp !== "GRUPO"; }).forEach(function(a){ it.push([a.nivel === "rojo" ? "r" : "w", NOMBRE[a.emp], esc(a.texto)]); });
+  var av = ent === "GRUPO" ? A.vencido.HC + A.vencido.PM : (A.vencido[ent] || 0), pv = ent === "GRUPO" ? P.por_empresa.HC.vencido + P.por_empresa.PM.vencido : ((P.por_empresa[ent] || {}).vencido || 0);
+  if (av > 0) it.push(["r", MM(av), "en cuotas vencidas de planes de ARCA, con pago programado en el último día permitido"]);
+  if (pv > 0) it.push(["r", MM(pv), "de deuda con proveedores ya vencida"]);
+  if (ent === "GRUPO" && C.vencido > 0) it.push(["", MM(C.vencido), "de cartera de clientes vencida (" + pct(C.vencido / (C.importe || 1)) + " del total a cobrar)"]);
+  var h = '<div class="panel"><h3>Qué mirar</h3>';
+  h += it.length ? '<ul class="mirar">' + it.map(function(x){ return '<li class="' + x[0] + '"><b>' + x[1] + '</b>' + x[2] + '</li>'; }).join("") + '</ul>' : '<div class="help" style="margin:0">Sin alertas: la posición queda dentro de los acuerdos durante las 13 semanas y no hay importes vencidos.</div>';
+  if (ent === "GRUPO") h += '<div class="help">Para el grupo se suman los acuerdos de las dos empresas, lo que supone pasar fondos de PM a HC. Sin pasar fondos, el margen mínimo es ' + MM(Math.min.apply(null, F.margen_sin_intercompany || F.margen)) + '.</div>';
+  return h + '</div>';
 }
 function vistaAdmin(){
   var cal = (D.meta && D.meta.calidad) || {}, h = "";
@@ -603,22 +642,20 @@ function vistaAdmin(){
 }
 function vistaResumen(){
   var F = D.flujo[ent], deu = D.deuda.resumen[ent], faltan = F.minimo < -F.acuerdo ? -(F.minimo + F.acuerdo) : 0;
-  var h = titularEjecutivo() + panelLectura() + '<div class="barra">' + selector() + '<span class="help" style="margin:0">Los indicadores siguientes corresponden a ' + NOMBRE[ent] + '.</span></div>';
+  // Orden pensado para leer en un minuto: veredicto → números → gráfico y alertas → vencimientos → lectura (la interpretación va al final).
+  var h = titularEjecutivo() + '<div class="barra">' + selector() + '<span class="help" style="margin:0">Los indicadores siguientes corresponden a ' + NOMBRE[ent] + '.</span></div>';
   h += '<div class="kpis">' +
     kpi("Posición bancaria hoy", MM(F.pos0), F.acuerdo ? "acuerdos " + MM(F.acuerdo) : "sin acuerdo", F.pos0 < 0 ? "bad" : "ok") +
     kpi("Punto más bajo · 13 semanas", MM(F.minimo), "semana " + F.semana_minimo + " (" + dm(D.semanas[F.semana_minimo - 1].desde) + ")", faltan > 0 ? "bad" : "ok", spark(F.posicion, "var(--s1)")) +
     kpi("Cobranza · 13 semanas", MM(F.cobranza), "comprometida " + pct(F.pct_cobranza_conocida), "", spark(F.lineas.cobranza, "var(--s1)")) +
     kpi("Pagos · 13 semanas", MM(F.pagos), "ARCA " + MM(F.totales.arca) + " · sueldos " + MM(F.totales.sueldos), "", spark(F.pagos_semanal.map(Math.abs), "var(--s2b)")) +
     kpi("Deuda total", MM(deu.total), "descubierto, cauciones, echeqs, ARCA, préstamos, proveedores y otros", "warn") + '</div>';
-  h += '<div class="panel"><h3>Alertas</h3>' + alertasDe(ent) + (ent === "GRUPO" ? '<div class="help">Para el grupo se suman los acuerdos de las dos empresas, lo que supone pasar fondos de PM a HC. Sin pasar fondos, el margen mínimo es ' + MM(Math.min.apply(null, F.margen_sin_intercompany || F.margen)) + '.</div>' : "") + '</div>';
-  h += '<div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + '</h3><div class="chart" id="ch_pos"></div><div class="help">En millones de pesos. Negativa = descubierto usado. Por debajo de la línea roja se superan los acuerdos con los bancos.</div></div>';
-  h += '<div class="panel"><h3>Ingresos y egresos por semana</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div>';
-  h += panelAgenda();
-  h += (ent === "GRUPO" ? puntosAtencion() : "");
+  h += '<div class="duo"><div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + '</h3><div class="chart" id="ch_pos"></div><div class="help">En millones de pesos. Negativa = descubierto usado. Por debajo de la línea roja se superan los acuerdos con los bancos.</div></div>' + panelQueMirar() + '</div>';
+  h += panelAgenda(true);
+  h += panelLectura();
   $("vista").innerHTML = h;
   accionesLectura();
-  lineaPosicion($("ch_pos"), F.posicion, F.acuerdo, D.semanas);
-  barrasSemanales($("ch_bar"), F.lineas.cobranza, F.pagos_semanal, D.semanas);
+  lineaPosicion($("ch_pos"), F.posicion, F.acuerdo, D.semanas, window.innerWidth > 900 ? 440 : 0);   // más alto en la columna angosta, para acompañar a "Qué mirar"
 }
 function alertasDe(e){
   var al = D.alertas.filter(function(a){ return a.emp === e; });
@@ -644,6 +681,7 @@ function vistaFlujo(){
   h += '<div class="kpis">' + kpi("Punto más bajo", MM(mn), "semana " + (L.posicion.indexOf(mn) + 1), faltan > 0 ? "bad" : "ok") + kpi("Faltan sobre acuerdos", faltan > 0 ? MM(faltan) : "—", F.acuerdo ? "acuerdos " + MM(F.acuerdo) : "sin acuerdo", faltan > 0 ? "bad" : "ok") +
     kpi("Ingresos · 13 semanas", MM(SUMA(L.ingresos)), pct(cumpl) + " de cumplimiento", "") + kpi("Egresos · 13 semanas", MM(SUMA(L.egresos)), "no cambian con el cumplimiento", "") + '</div>';
   h += '<div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3><div class="chart" id="ch_pos"></div></div>';
+  h += '<div class="panel"><h3>Ingresos y egresos por semana · ' + NOMBRE[ent] + '</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div>';
   h += '<div class="panel"><h3>Flujo de caja trimestral · ' + NOMBRE[ent] + '</h3>' + tablaFlujo(L, n, F, F.pos0) + '</div>';
   h += '<div class="panel"><h3>¿Qué pasa si se cobra menos?</h3><div class="scrollx"><table><thead><tr><th>Cumplimiento</th><th>Punto más bajo</th><th>Semana</th><th>Faltan sobre acuerdos</th></tr></thead><tbody>' +
     D.escenarios.map(function(e){ var p = e.emp[ent].posicion, m = Math.min.apply(null, p), f = m < -F.acuerdo ? -(m + F.acuerdo) : 0;
@@ -652,6 +690,7 @@ function vistaFlujo(){
   h += '<details class="panel"><summary>Cómo se arma este flujo</summary><div class="help" style="font-size:13px;line-height:1.65;margin-top:10px">Saldos: Excel diario de Tesorería (cuentas corrientes y acuerdos de descubierto). Cobranzas: cuentas a cobrar por fecha de vencimiento; lo vencido se cobra la semana siguiente; AESA paga a 30 días desde la factura; las cobranzas confirmadas por el equipo toman la fecha real. Pagos: deuda a proveedores del sistema, cheques propios diferidos, planes de ARCA (pagados en el último día permitido), sueldos, impuestos y el ritmo de pagos reciente de los extractos bancarios. No incluye operaciones entre las empresas del grupo.</div></details>';
   $("vista").innerHTML = h;
   lineaPosicion($("ch_pos"), L.posicion, F.acuerdo, D.semanas);
+  barrasSemanales($("ch_bar"), L.ingresos, L.egresos, D.semanas);
 }
 function panelPrecision(){
   var P = D.meta.precision, t = '<div class="panel"><h3>¿Qué tan bien acierta el pronóstico?</h3>';
@@ -764,6 +803,7 @@ function panelCosto(){
 function vistaDeuda(){
   var R = D.deuda.resumen, G = R.GRUPO, A = D.deuda.arca, P = D.deuda.proveedores, S = D.deuda.pasivos;
   var h = '<div class="kpis">' + kpi("Deuda total del grupo", MM(G.total), "sin operaciones entre empresas", "") + kpi("Deuda financiera", MM(G.descubierto + G.cauciones + G.echeqs + (G.prestamos || 0)), "descubierto, cauciones, echeqs y préstamos · " + pct((G.descubierto + G.cauciones + G.echeqs + (G.prestamos || 0)) / (G.total || 1)) + " del total", "") + ETQ.map(function(l, i){ return kpi(l, MM(G[CLV[i]]), pct(G[CLV[i]] / (G.total || 1)) + " del total", ""); }).join("") + '</div>';
+  h += panelAgenda(false, "GRUPO");
   h += panelCosto();
   h += '<div class="panel"><h3>Composición de la deuda · en millones de $</h3><div class="legend"><span><i style="background:var(--s1);border:1px solid var(--s1)"></i>Hormigones Cardales</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Premoldeados</span></div><div id="ch_deu"></div>' +
     '<div class="scrollx"><table style="margin-top:10px"><thead><tr><th></th>' + ETQ.map(function(l){ return '<th>' + l + '</th>'; }).join("") + '<th>Total</th></tr></thead><tbody>' +
@@ -812,6 +852,7 @@ function md(t){
   if (lista) out.push("</ul>");
   return out.join("");
 }
+var lecturaAbierta = false;
 function panelLectura(){
   var ia = D.ia || {}, r = ia.resumen, admin = D.publicacion && D.publicacion.rol === "admin";
   if (!admin && !r) return historialLecturas();
@@ -825,7 +866,8 @@ function panelLectura(){
       '<div class="acc"><button class="btn" id="lec_guardar">Guardar</button><button class="btn ghost" id="lec_cancelar">Cancelar</button></div></div>';
     return h;
   }
-  if (r) h += md(r.texto);
+  var plegada = r && !lecturaAbierta && !(admin && !r.aprobado) && String(r.texto || "").length > 380;
+  if (r) h += '<div class="cuerpo' + (plegada ? " corta" : "") + '">' + md(r.texto) + '</div>' + (String(r.texto || "").length > 380 && !(admin && !r.aprobado) ? '<button class="enlace" id="lec_mas" style="margin:6px 0 0">' + (plegada ? "Leer la lectura completa" : "Mostrar menos") + '</button>' : '');
   else h += '<p class="help">' + (ia.disponible ? 'Todavía no hay una lectura para este informe. Generala con IA y revisala antes de aprobarla.' : 'La IA no está conectada: falta la clave <b>ANTHROPIC_API_KEY</b> en el servicio de Render (la misma que usa la app). Mientras tanto podés escribir la lectura a mano.') + '</p>';
   if (admin) {
     h += '<div class="acc">' + (ia.disponible ? '<button class="btn ghost" id="lec_generar">' + (r ? "Regenerar con IA" : "Generar con IA") + '</button>' : '') +
@@ -860,6 +902,7 @@ var editandoLectura = false;
 function accionesLectura(){
   var sid = D.publicacion.mostrado_id, ok = function(){ editandoLectura = false; cargar(); }, mal = function(e){ alert(e.message); pintar(); };
   var b;
+  var bm_ = $("lec_mas"); if (bm_) bm_.onclick = function(){ lecturaAbierta = !lecturaAbierta; pintar(); if (!lecturaAbierta) { var L_ = $("lectura"); if (L_) L_.scrollIntoView({block: "nearest"}); } };
   var bg = $("lec_generar"), bpr = $("lec_probar");
   if (bpr) bpr.onclick = function(){ probarIA(bpr, $("lec_diag")); };
   if (bg) bg.onclick = function(){
@@ -957,7 +1000,8 @@ document.querySelectorAll("nav.tabs button").forEach(function(b){
 });
 $("vista").addEventListener("click", function(ev){
   var b = ev.target.closest("button"); if (!b) return;
-  if (b.hasAttribute("data-ent")) { ent = b.getAttribute("data-ent"); pintar(); }
+  if (b.hasAttribute("data-ir")) { tab = b.getAttribute("data-ir"); marcarTab(); store.set("gp_tab", tab); pintar(); window.scrollTo(0, 0); }
+  else if (b.hasAttribute("data-ent")) { ent = b.getAttribute("data-ent"); pintar(); }
   else if (b.hasAttribute("data-c")) { cumpl = +b.getAttribute("data-c") / 100; pintar(); }
 });
 $("vista").addEventListener("input", function(ev){ if (ev.target.id === "rng") { cumpl = +ev.target.value / 100; pintar(); var r = $("rng"); if (r) r.focus(); } });
