@@ -77,6 +77,9 @@ main{padding:22px 0 56px}
 .banner{border-left:4px solid var(--accent-soft);background:var(--accent-bg);padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px}
 .banner.admin{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .banner.admin .acc{display:flex;gap:8px;flex-wrap:wrap}
+[hidden]{display:none!important}
+button.enlace{background:none;border:0;padding:0;margin-left:6px;color:var(--accent-deep);text-decoration:underline;cursor:pointer;font:inherit}
+table.ag td.wrapc{min-width:220px}.ag-ren{color:var(--ink-3)}
 .banner.admin .btn{padding:6px 14px;font-size:13px}
 details.entradas{margin:0 0 14px;padding:10px 14px}
 details.entradas summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
@@ -290,6 +293,7 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
     <button role="tab" data-tab="cobranzas" aria-selected="false">Cobranzas</button>
     <button role="tab" data-tab="ventas" aria-selected="false">Proyección de ventas</button>
     <button role="tab" data-tab="deuda" aria-selected="false">Deuda</button>
+    <button role="tab" data-tab="admin" id="tab_admin" aria-selected="false" hidden>Administración</button>
   </div></nav>
   <main><div class="wrap">
     <div id="avisos"></div>
@@ -375,9 +379,10 @@ function encabezado(){
   var sello = pub.publicado_ts ? "Publicado el " + dmy(pub.publicado_ts.slice(0,10)) + " " + pub.publicado_ts.slice(11) + " h" : "";
   if (!admin && pub.modo === "manual" && sello) $("stamp").innerHTML += '<br><b>' + sello + '</b>';
   if (admin) av.push(barraAdmin(pub, sello));
-  (admin ? (cal.avisos || []) : (cal.avisos_publicos || [])).forEach(function(a){ av.push('<div class="banner">' + esc(a) + '</div>'); });
-  if (admin && (cal.entradas || []).length) av.push(panelEntradas(cal.entradas));
+  if (!admin) (cal.avisos_publicos || []).forEach(function(a){ av.push('<div class="banner">' + esc(a) + '</div>'); });
+  $("tab_admin").hidden = !admin;
   $("avisos").innerHTML = av.join("");
+  var ir = $("ir_admin"); if (ir) ir.onclick = function(){ tab = "admin"; marcarTab(); store.set("gp_tab", tab); pintar(); window.scrollTo(0, 0); };
   var bp = $("btn_publicar"); if (bp) bp.onclick = publicar;
   var bm = $("btn_modo"); if (bm) bm.onclick = cambiarModo;
   var ba = $("btn_actualizar"); if (ba) ba.onclick = actualizarAhora;
@@ -387,6 +392,8 @@ function barraAdmin(pub, sello){
   if (auto) t = '<b>Publicación automática.</b> Los accionistas ven cada informe apenas se calcula.';
   else if (pub.pendiente) t = '<b>Borrador sin publicar.</b> ' + (sello ? 'Los accionistas siguen viendo el informe publicado el ' + esc(sello.replace("Publicado el ", "")) + '.' : 'Los accionistas todavía no ven nada.');
   else t = '<b>Informe publicado</b> el ' + esc(sello.replace("Publicado el ", "")) + (pub.publicado_por ? ' por ' + esc(pub.publicado_por) : '') + '. Los accionistas ven esta versión.';
+  var cal = (D.meta && D.meta.calidad) || {}, pend = (cal.entradas || []).filter(function(e){ return e.estado !== "ok"; }).length + (cal.avisos || []).length;
+  if (pend && tab !== "admin") t += ' <button class="enlace" id="ir_admin">' + pend + (pend === 1 ? " punto para revisar" : " puntos para revisar") + ' en Administración</button>';
   return '<div class="banner admin"><span>' + t + '</span><span class="acc">' +
     (!auto && pub.pendiente ? '<button class="btn" id="btn_publicar">Publicar este informe</button>' : '') +
     '<button class="btn ghost" id="btn_actualizar" title="Lee de nuevo la carpeta de Drive y recalcula el informe">Actualizar ahora</button>' +
@@ -402,8 +409,8 @@ function lineaArchivado(){
 }
 function panelEntradas(es){
   var malos = es.filter(function(e){ return e.estado !== "ok"; }).length, ico = {ok:"●", atencion:"▲", falta:"■"}, tx = {ok:"Al día", atencion:"Revisar", falta:"Falta"};
-  return '<details class="panel entradas"' + (malos ? " open" : "") + '><summary><b>Estado de los datos de entrada</b> · ' + (malos ? malos + (malos === 1 ? " punto para revisar" : " puntos para revisar") : "todo al día") + '</summary>' +
-    '<ul class="ents">' + es.map(function(e){ return '<li class="' + e.estado + '"><span class="ent">' + ico[e.estado] + ' ' + tx[e.estado] + '</span><span class="nm">' + esc(e.nombre) + '</span><span class="dt">' + esc(e.detalle) + '</span></li>'; }).join("") + '</ul>' + lineaArchivado() + '</details>';
+  return '<div class="panel entradas"><h3>Estado de los datos de entrada · ' + (malos ? malos + (malos === 1 ? " punto para revisar" : " puntos para revisar") : "todo al día") + '</h3>' +
+    '<ul class="ents">' + es.map(function(e){ return '<li class="' + e.estado + '"><span class="ent">' + ico[e.estado] + ' ' + tx[e.estado] + '</span><span class="nm">' + esc(e.nombre) + '</span><span class="dt">' + esc(e.detalle) + '</span></li>'; }).join("") + '</ul>' + lineaArchivado() + '<div class="help">Esto lo ves solo vos. Los accionistas no ven el estado de los archivos ni estos avisos.</div></div>';
 }
 function llamar(metodo, ruta, cuerpo){
   var t = store.get("gp_token");
@@ -570,6 +577,30 @@ function puntosAtencion(){
   if (!it.length) return "";
   return tituloSec("Puntos de atención") + '<div class="atencion">' + it.map(function(x){ return '<div class="it ' + x[0] + '"><b class="v num">' + x[1] + '</b><span>' + x[2] + '</span></div>'; }).join("") + '</div>';
 }
+function panelAgenda(){
+  var A = D.agenda; if (!A) return "";
+  var its = A.items.filter(function(x){ return ent === "GRUPO" || x.emp === ent; });
+  var h = '<div class="panel"><h3>Próximos vencimientos financieros · ' + A.dias + ' días' + (ent === "GRUPO" ? "" : " · " + NOMBRE[ent]) + '</h3>';
+  if (!its.length) return h + '<div class="help">No hay vencimientos financieros cargados para los próximos ' + A.dias + ' días.</div></div>';
+  var caja30 = 0, caja = 0, ren = 0, hoy = D.meta.hoy, lim = new Date(new Date(hoy + "T00:00:00").getTime() + 30 * 864e5).toISOString().slice(0, 10);
+  its.forEach(function(x){ if (x.caja && x.fecha >= hoy) { caja += x.importe || 0; if (x.fecha <= lim) caja30 += x.importe || 0; } if (x.tipo === "Caución bursátil") ren += x.importe || 0; });
+  h += '<div class="kpis">' + kpi("A pagar en 30 días", MM(caja30), "cuotas de préstamos, echeqs y planes de ARCA", "") + kpi("A pagar en " + A.dias + " días", MM(caja), "sale de caja en su fecha", "") +
+    kpi("Cauciones que se renuevan", MM(ren), ren ? "no salen de caja; dependen de la renovación" : "sin cauciones vigentes", ren ? "warn" : "") + '</div>';
+  h += '<div class="scrollx"><table class="tl ag"><thead><tr><th>Fecha</th><th class="n">Días</th><th>Vencimiento</th><th>Empresa</th><th class="n">Importe</th><th>Qué pasa ese día</th></tr></thead><tbody>' +
+    its.map(function(x){ var ren_ = x.estado === "renovada";
+      return '<tr' + (ren_ ? ' class="ag-ren"' : '') + '><td class="num">' + (ren_ ? "Vigente" : (x.tipo === "Planes de ARCA" ? "Sem. " + dmy(x.fecha).slice(0, 5) : dmy(x.fecha))) + '</td><td class="num">' + (x.dias >= 0 && !ren_ ? x.dias : "—") + '</td><td><b>' + esc(x.tipo) + '</b>' + (x.detalle || ren_ ? '<br><span class="help" style="margin:0">' + esc(x.detalle) + (ren_ ? " · último vencimiento registrado " + dmy(x.fecha).slice(0, 5) : "") + '</span>' : '') + '</td><td>' + (NOMBRE[x.emp] || x.emp) + '</td><td class="num">' + (x.importe === null || x.importe === undefined ? "—" : '<b>' + mm(x.importe) + '</b>') + '</td><td class="wrapc">' + esc(x.nota || "") + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+    '<div class="help">En millones de pesos. Solo deuda financiera y fiscal con fecha: cauciones, echeqs propios descontados, cuotas de préstamos, planes de ARCA y el certificado de no retención de IVA. Los pagos a proveedores y los sueldos están en el flujo de caja.</div></div>';
+  return h;
+}
+function vistaAdmin(){
+  var cal = (D.meta && D.meta.calidad) || {}, h = "";
+  h += '<div class="panel"><h3>Administración</h3><div class="help" style="margin:0">Esta pestaña la ves solo vos. Acá están el estado de los archivos de Drive, los avisos de lectura y la configuración del asistente de IA. Los accionistas ven únicamente el informe publicado.</div></div>';
+  if ((cal.entradas || []).length) h += panelEntradas(cal.entradas);
+  if ((cal.avisos || []).length) h += '<div class="panel"><h3>Avisos de la última actualización</h3>' + cal.avisos.map(function(a){ return '<div class="help" style="margin-top:4px">▲ ' + esc(a) + '</div>'; }).join("") + '</div>';
+  h += panelIAAdmin();
+  $("vista").innerHTML = h;
+  accionesIAAdmin();
+}
 function vistaResumen(){
   var F = D.flujo[ent], deu = D.deuda.resumen[ent], faltan = F.minimo < -F.acuerdo ? -(F.minimo + F.acuerdo) : 0;
   var h = titularEjecutivo() + panelLectura() + '<div class="barra">' + selector() + '<span class="help" style="margin:0">Los indicadores siguientes corresponden a ' + NOMBRE[ent] + '.</span></div>';
@@ -582,10 +613,10 @@ function vistaResumen(){
   h += '<div class="panel"><h3>Alertas</h3>' + alertasDe(ent) + (ent === "GRUPO" ? '<div class="help">Para el grupo se suman los acuerdos de las dos empresas, lo que supone pasar fondos de PM a HC. Sin pasar fondos, el margen mínimo es ' + MM(Math.min.apply(null, F.margen_sin_intercompany || F.margen)) + '.</div>' : "") + '</div>';
   h += '<div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + '</h3><div class="chart" id="ch_pos"></div><div class="help">En millones de pesos. Negativa = descubierto usado. Por debajo de la línea roja se superan los acuerdos con los bancos.</div></div>';
   h += '<div class="panel"><h3>Ingresos y egresos por semana</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div>';
+  h += panelAgenda();
   h += (ent === "GRUPO" ? puntosAtencion() : "");
-  if (D.publicacion.rol === "admin") h += panelIAAdmin();
   $("vista").innerHTML = h;
-  accionesLectura(); accionesIAAdmin();
+  accionesLectura();
   lineaPosicion($("ch_pos"), F.posicion, F.acuerdo, D.semanas);
   barrasSemanales($("ch_bar"), F.lineas.cobranza, F.pagos_semanal, D.semanas);
 }
@@ -917,7 +948,7 @@ document.addEventListener("keydown", function(ev){ if (ev.key === "Escape" && $(
 function pintar(){
   if (!D) return;
   encabezado(); configurarChat();
-  if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else vistaDeuda();
+  if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
   $("pie").textContent = "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
 }
 function marcarTab(){ document.querySelectorAll("nav.tabs button").forEach(function(x){ x.setAttribute("aria-selected", x.getAttribute("data-tab") === tab); }); }
