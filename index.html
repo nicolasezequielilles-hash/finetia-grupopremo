@@ -127,6 +127,30 @@ details.historial .hist{border-top:1px solid var(--line);margin-top:12px;padding
 details.historial .hist ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.5}
 details.historial .hist p{font-size:13.5px;margin:4px 0}
 .warnline{color:var(--warn)}
+/* Panel del equipo de Cobranzas */
+.ges-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:12px 18px;flex-wrap:wrap;margin-bottom:14px}
+.ges-cab h2{font-size:19px;color:var(--accent-deep);margin:0 0 3px}
+.ges-cab .acc{display:flex;gap:8px;flex-wrap:wrap}
+.ges-filtros{display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.ges-filtros input[type=search]{flex:1;min-width:200px;max-width:340px;padding:8px 10px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit}
+table.ges td,table.ges th{text-align:left;vertical-align:middle}
+table.ges td.num,table.ges th.n{text-align:right}
+table.ges tr.cli td{background:var(--surface-2);font-weight:600;border-top:1px solid var(--line-2)}
+table.ges tr.cli td{white-space:normal}table.ges tr.cli td.num{white-space:nowrap}
+table.ges th,table.ges td{padding:6px 7px}
+table.ges tr.cli td .sub{font-weight:400;color:var(--ink-3);margin-left:8px}
+table.ges tr.cambio td{background:var(--accent-bg)}
+table.ges tr.cambio td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+table.ges input[type=date],table.ges select,table.ges input[type=text]{padding:5px 7px;border:1px solid var(--line-2);border-radius:5px;background:var(--surface);color:var(--ink);font-family:inherit;font-size:12.5px;width:auto}
+table.ges input[type=text]{min-width:130px;width:100%}
+table.ges .etq{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;border:1px solid currentColor;white-space:nowrap}
+table.ges .etq.bad{color:var(--bad)}table.ges .etq.warn{color:var(--warn)}table.ges .etq.ok{color:var(--ok)}table.ges .etq.gris{color:var(--ink-3)}
+.ges-guardar{position:sticky;bottom:12px;z-index:5;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:1px solid var(--accent-soft);border-radius:8px;padding:10px 14px;box-shadow:0 6px 18px rgba(20,40,70,.16);margin-top:12px}
+.ges-guardar .acc{display:flex;gap:8px}
+.ges-msg{margin-bottom:14px}
+.ges-filtros .seg{display:flex;flex-wrap:wrap}
+@media (max-width:600px){.ges-filtros .seg button{padding:7px 10px;font-size:12px;flex:1 1 auto}.ges-cab .acc .btn{flex:1 1 auto}}
+@media print{.ges-guardar,.ges-cab .acc,.ges-filtros{display:none!important}}
 .prio{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:9px;border:1px solid currentColor;margin-right:6px;vertical-align:1px;white-space:nowrap}
 .prio.alta{color:var(--bad)} .prio.media{color:var(--warn)} .prio.baja{color:var(--ink-3)}
 .sello{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-2)}
@@ -336,13 +360,13 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
       <button class="btn" type="submit">Ingresar</button>
       <div class="err" id="login_err" role="alert"></div>
     </form>
-    <div class="pie">Información confidencial. Uso exclusivo de los accionistas.</div>
+    <div class="pie">Información confidencial. Uso exclusivo de usuarios autorizados.</div>
   </div>
 </section>
 
 <div id="app" class="hidden">
   <header class="top"><div class="wrap">
-    <div class="marca"><img class="logo" alt="Premo" src="data:image/png;base64,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"><div><div class="t" id="titulo">Grupo Premo</div><div class="s">Informe financiero · uso exclusivo de accionistas</div></div></div>
+    <div class="marca"><img class="logo" alt="Premo" src="data:image/png;base64,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"><div><div class="t" id="titulo">Grupo Premo</div><div class="s" id="subtitulo">Informe financiero · uso exclusivo de accionistas</div></div></div>
     <div class="estado"><div id="stamp"></div><span id="pill"></span></div>
     <button class="btn ghost" id="imprimir">Imprimir / PDF</button>
     <button class="btn ghost" id="salir">Salir</button>
@@ -354,6 +378,7 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
     <button role="tab" data-tab="cobranzas" aria-selected="false">Cobranzas</button>
     <button role="tab" data-tab="ventas" aria-selected="false">Proyección de ventas</button>
     <button role="tab" data-tab="deuda" aria-selected="false">Deuda</button>
+    <button role="tab" data-tab="gestion" id="tab_gestion" aria-selected="false" hidden>Gestión de cobranzas</button>
     <button role="tab" data-tab="admin" id="tab_admin" aria-selected="false" hidden>Administración</button>
   </div></nav>
   <main><div class="wrap">
@@ -408,17 +433,18 @@ $("f_login").onsubmit = function(ev){
   ev.preventDefault(); var err = $("login_err"); err.textContent = "Ingresando…";
   fetch(API + "/api/v1/auth/login", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({username:$("u").value.trim(), password:$("p").value})})
     .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error(j.detail || "No se pudo ingresar."); return j; }); })
-    .then(function(j){ store.set("gp_token", j.token); $("p").value = ""; err.textContent = ""; cargar(); })
+    .then(function(j){ store.set("gp_token", j.token); store.set("gp_rol", j.rol || ""); $("p").value = ""; err.textContent = ""; cargar(); })
     .catch(function(e){ err.textContent = (e && e.message) || "No se pudo conectar con el servidor. Probá de nuevo en un minuto."; });
 };
 function cargar(){
   var t = store.get("gp_token"); if (!t) return mostrarLogin("");
   $("login").classList.add("hidden"); $("app").classList.remove("hidden"); $("vista").innerHTML = '<div class="panel">Cargando datos…</div>';
-  fetch(API + "/api/v1/portal/resumen", {headers:{Authorization:"Bearer " + t}})
-    .then(function(r){ return r.json().then(function(j){
+  var leer = function(ruta){ return fetch(API + ruta, {headers:{Authorization:"Bearer " + t}}).then(function(r){ return r.json().then(function(j){
       if (r.status === 401) { store.del("gp_token"); throw {login:true, message:"La sesión venció. Ingresá de nuevo."}; }
-      if (!r.ok) throw new Error(j.detail || "Error del servidor."); return j; }); })
-    .then(function(j){ D = j; cumpl = 1; pintar(); })
+      if (r.status === 403 && ruta.indexOf("/portal/") > 0) return leer("/api/v1/cobranzas/panel");      // usuario del equipo de Cobranzas: solo su panel
+      if (!r.ok) throw new Error(j.detail || "Error del servidor."); return j; }); }); };
+  leer(store.get("gp_rol") === "cobranzas" ? "/api/v1/cobranzas/panel" : "/api/v1/portal/resumen")
+    .then(function(j){ D = j; cumpl = 1; ges.ed = {}; pintar(); })
     .catch(function(e){
       if (e && e.login) return mostrarLogin(e.message);
       $("vista").innerHTML = '<div class="banner bad">' + esc((e && e.message) || "No se pudo leer el resumen.") + ' <button class="btn" id="reintentar" style="margin-left:10px;padding:5px 12px">Reintentar</button></div>';
@@ -443,6 +469,11 @@ function encabezado(){
   if (admin) av.push(barraAdmin(pub, sello));
   if (!admin) (cal.avisos_publicos || []).forEach(function(a){ av.push('<div class="banner">' + esc(a) + '</div>'); });
   $("tab_admin").hidden = !admin;
+  var cobr = pub.rol === "cobranzas";
+  $("tab_gestion").hidden = !(admin || cobr); $("tab_gestion").style.order = cobr ? "-1" : "";
+  document.querySelectorAll("nav.tabs button").forEach(function(b){ var k = b.getAttribute("data-tab"); if (k !== "gestion" && k !== "admin") b.hidden = cobr && k !== "ventas"; });
+  $("subtitulo").textContent = cobr ? "Panel del equipo de Cobranzas" : "Informe financiero · uso exclusivo de accionistas";
+  if (cobr) { document.title = D.titulo + " · Cobranzas"; $("stamp").innerHTML = 'saldos al ' + dmy(m.fecha_saldos); av = []; }
   $("avisos").innerHTML = av.join("");
   var ir = $("ir_admin"); if (ir) ir.onclick = function(){ tab = "admin"; marcarTab(); store.set("gp_tab", tab); pintar(); window.scrollTo(0, 0); };
   var bp = $("btn_publicar"); if (bp) bp.onclick = publicar;
@@ -760,9 +791,153 @@ function vistaCobranzas(){
   h += '<div class="panel" style="margin-top:16px"><h3>Principales clientes · en millones de $</h3><div class="scrollx"><table class="tl"><thead><tr><th>Cliente</th><th>Empresa</th><th class="n">Facturas</th><th class="n">Total</th><th class="n">Vencido</th><th class="n">A 30 días</th><th class="n">Más de 30</th><th class="n">Con fecha real</th></tr></thead><tbody>' +
     C.clientes.map(function(c){ return '<tr><td>' + esc(c.cliente) + '</td><td>' + c.emp + '</td><td class="num">' + c.facturas + '</td><td class="num"><b>' + mm(c.importe) + '</b></td><td class="num' + (c.vencido > 0 ? " neg" : "") + '">' + mm(c.vencido) + '</td><td class="num">' + mm(c.a_30) + '</td><td class="num">' + mm(c.mas_30) + '</td><td class="num">' + (c.con_fecha_real || "—") + '</td></tr>'; }).join("") +
     (C.otros_clientes ? '<tr class="tot"><td>Otros ' + C.otros_clientes + ' clientes</td><td></td><td></td><td class="num">' + mm(C.importe_otros) + '</td><td></td><td></td><td></td><td></td></tr>' : "") + '</tbody></table></div>' +
-    '<div class="help">Echeqs de clientes en cartera: ' + C.echeqs_en_cartera.cantidad + ' por ' + MM(C.echeqs_en_cartera.importe) + '. “Con fecha real” indica que el equipo informó cuándo se cobra esa factura.</div></div>';
+    '<div class="help">Echeqs de clientes en cartera: ' + C.echeqs_en_cartera.cantidad + ' por ' + MM(C.echeqs_en_cartera.importe) + '. “Con fecha real” indica que el equipo de Cobranzas informó cuándo se cobra esa factura.' +
+    (t.fuera ? ' ' + t.fuera + (t.fuera === 1 ? ' factura por ' : ' facturas por ') + MM(t.importe_fuera) + ' en disputa o demoradas quedaron fuera del flujo de 13 semanas.' : '') +
+    (D.meta.cobranzas_actualizado ? ' Última actualización del equipo de Cobranzas: ' + esc(fechaHora(D.meta.cobranzas_actualizado.ts)) + '.' : '') + '</div></div>';
   $("vista").innerHTML = h;
 }
+/* ---------- Gestión de cobranzas (equipo de Cobranzas y administrador) ---------- */
+var ges = {ed: {}, filtro: "todas", q: "", cargando: false, msg: null, ent: "GRUPO", ocupado: false};
+var PESOS = function(v){ return "$ " + NF0.format(Math.round(v || 0)); };
+function gesBase(f){ return {fecha: f.fecha || "", estado: f.estado || "", nota: f.nota || ""}; }
+function gesValor(f){ return ges.ed[f.clave] || gesBase(f); }
+function gesCambios(G){ return G.facturas.filter(function(f){ var e = ges.ed[f.clave], b = gesBase(f); return e && (e.fecha !== b.fecha || e.estado !== b.estado || e.nota !== b.nota); }); }
+function gesEnFlujo(f){
+  if (f.efecto === "cobrada" && !f.semana) return '<span class="etq ok">Ya cobrada</span>';
+  if (f.efecto === "fuera") return '<span class="etq gris">Fuera del flujo</span>';
+  if (!f.semana) return '<span class="etq gris">Después de la semana 13</span>';
+  var S = D.gestion.semanas[f.semana - 1], t = 'Semana ' + f.semana + ' · ' + dm(S.desde);
+  if (f.efecto === "promesa_vencida") return t + ' <span class="etq bad">Promesa vencida</span>';
+  if (f.efecto === "comprometida" || f.efecto === "cobrada") return '<b>' + t + '</b> <span class="etq ok">Fecha comprometida</span>';
+  if (f.efecto === "archivo") return t + ' <span class="etq gris">Planilla</span>';
+  return t + (f.dias_vencida ? ' <span class="etq warn">Vencida, sin fecha</span>' : '');
+}
+function gesFila(f){
+  var v = gesValor(f), b = gesBase(f), cambio = v.fecha !== b.fecha || v.estado !== b.estado || v.nota !== b.nota, G = D.gestion;
+  return '<tr data-fac="' + esc(f.clave) + '"' + (cambio ? ' class="cambio"' : '') + '><td>' + esc(f.comprobante) + '</td><td>' + f.emp + '</td><td>' + dm(f.emision) + '</td><td>' + dmy(f.venc_esperado) +
+    (f.dias_vencida ? ' <span class="neg">(' + f.dias_vencida + ' d)</span>' : '') + '</td><td class="num">' + PESOS(f.importe) + '</td><td>' + gesEnFlujo(f) + '</td>' +
+    '<td><input type="date" data-g="fecha" aria-label="Fecha comprometida de ' + esc(f.comprobante) + '" value="' + esc(v.fecha) + '"></td>' +
+    '<td><select data-g="estado" aria-label="Estado de ' + esc(f.comprobante) + '"><option value="">Sin estado</option>' + G.estados.map(function(e){ return '<option value="' + e[0] + '"' + (v.estado === e[0] ? " selected" : "") + '>' + esc(e[1]) + '</option>'; }).join("") + '</select></td>' +
+    '<td><input type="text" data-g="nota" maxlength="' + G.max_nota + '" aria-label="Nota de ' + esc(f.comprobante) + '" placeholder="Nota" value="' + esc(v.nota) + '"></td></tr>';
+}
+function gesPasa(f){
+  var v = gesValor(f), q = ges.q.trim().toLowerCase();
+  if (q && (f.cliente + " " + f.comprobante).toLowerCase().indexOf(q) < 0) return false;
+  if (ges.filtro === "vencidas") return f.dias_vencida > 0;
+  if (ges.filtro === "sin_fecha") return !v.fecha && v.estado !== "disputa";
+  if (ges.filtro === "promesas") return f.efecto === "promesa_vencida";
+  if (ges.filtro === "cambios") return !!gesCambios({facturas: [f]}).length;
+  return true;
+}
+function gesTabla(){
+  var G = D.gestion, vis = G.facturas.filter(gesPasa), grupos = [], idx = {};
+  vis.forEach(function(f){ var k = f.cliente; if (!(k in idx)) { idx[k] = grupos.length; grupos.push({cliente: k, fs: [], imp: 0, venc: 0}); } var g = grupos[idx[k]]; g.fs.push(f); g.imp += f.importe; if (f.dias_vencida) g.venc += f.importe; });
+  grupos.sort(function(a, b){ return b.imp - a.imp; });
+  if (!vis.length) return '<p class="help" style="margin:14px 0">No hay facturas que coincidan con el filtro.</p>';
+  return '<div class="scrollx"><table class="ges"><thead><tr><th>Comprobante</th><th>Emp.</th><th>Emisión</th><th>Vence</th><th class="n">Importe<small>con IVA</small></th><th>Hoy en el flujo</th><th>Fecha comprometida</th><th>Estado</th><th>Nota</th></tr></thead><tbody>' +
+    grupos.map(function(g){
+      return '<tr class="cli"><td colspan="4">' + esc(g.cliente) + '<span class="sub">' + g.fs.length + (g.fs.length === 1 ? " factura" : " facturas") + (g.venc ? ' · vencido ' + PESOS(g.venc) : '') + '</span></td><td class="num">' + PESOS(g.imp) + '</td><td></td>' +
+        '<td colspan="3">' + (g.fs.length > 1 ? '<label style="font-weight:400;font-size:12px;margin:0">Fecha para todas: <input type="date" data-cli="' + esc(g.cliente) + '" aria-label="Misma fecha para todas las facturas de ' + esc(g.cliente) + '"></label>' : '') + '</td></tr>' + g.fs.map(gesFila).join("");
+    }).join("") + '</tbody></table></div>';
+}
+function gesBarra(){
+  var n = gesCambios(D.gestion).length, b = $("ges_guardar_caja"); if (!b) return;
+  b.classList.toggle("hidden", !n);
+  $("ges_guardar_txt").textContent = n + (n === 1 ? " factura con cambios sin guardar" : " facturas con cambios sin guardar");
+}
+function gesSemanal(){
+  var G = D.gestion, C = G.cobranza[ges.ent], S = G.semanas, fila = function(n, v, cls){ return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + n + '</td>' + v.map(function(x){ return '<td class="num">' + mm(x) + '</td>'; }).join("") + '<td class="num"><b>' + mm(SUMA(v)) + '</b></td></tr>'; };
+  return '<div class="scrollx"><table class="fl"><thead><tr><th style="text-align:left">En millones de $</th>' + S.map(function(x, i){ return '<th>S' + (i + 1) + '<small>' + dm(x.desde) + '</small></th>'; }).join("") + '<th>13 sem.</th></tr></thead><tbody>' +
+    fila("Facturas de la cartera", C.cartera) + fila("Echeqs de clientes en cartera", C.echeqs) + fila("Ventas nuevas (pronóstico)", C.nuevas) + fila("Cobranza total", C.total, "tot") + '</tbody></table></div>';
+}
+function gesMensaje(j){
+  var f = j.flujo || {}, g = j.guardado, t = [], cls = "";
+  if (j.subido) t.push('Se cargó el archivo <b>' + esc(j.subido.nombre) + '</b> como ' + esc(j.subido.que) + '.');
+  if (g) t.push(g.guardadas ? g.guardadas + (g.guardadas === 1 ? " factura guardada." : " facturas guardadas.") : "No había cambios para guardar.");
+  if (g && g.ignoradas) t.push(g.ignoradas + " ya no están en la cartera y se omitieron.");
+  if (f.estado === "actualizado") {
+    var x = (f.informes || []).filter(function(i){ return i.publicado; })[0] || (f.informes || [])[0];
+    var igual = x && Math.abs(x.antes.cobranza - x.despues.cobranza) < 1 && Math.abs(x.antes.minimo - x.despues.minimo) < 1;
+    if (x && x.cambio && igual) t.push('Se releyeron los archivos y el flujo quedó igual.');
+    else if (x && x.cambio) t.push('El flujo ya está actualizado: la cobranza de 13 semanas pasó de ' + MM(x.antes.cobranza) + ' a ' + MM(x.despues.cobranza) + ' y el punto más bajo de ' + MM(x.antes.minimo) + ' a ' + MM(x.despues.minimo) + '.' +
+      ((f.informes || []).some(function(i){ return i.publicado; }) ? ' Los accionistas ya lo ven.' : ''));
+    else if (x) t.push('El flujo no cambió con esto.');
+  } else if (f.estado === "pendiente" || f.estado === "error") { t.push(esc(f.mensaje)); cls = f.estado === "error" ? " bad" : ""; }
+  return {html: t.join(" "), cls: cls};
+}
+function gesRecibir(j){ var m = gesMensaje(j); if (D.publicacion.rol === "cobranzas") { var pub = D.publicacion; D = j; D.publicacion = pub; } else D.gestion = j.gestion; ges.ed = {}; ges.msg = m; ges.ocupado = false; pintar(); }
+function gesFalla(e){ ges.ocupado = false; ges.msg = {html: esc((e && e.message) || "No se pudo completar."), cls: " bad"}; pintar(); }
+function vistaGestion(){
+  if (!D.gestion) {
+    $("vista").innerHTML = '<div class="panel">Cargando la cartera…</div>';
+    if (!ges.cargando) { ges.cargando = true; llamar("GET", "/api/v1/cobranzas/panel").then(function(j){ ges.cargando = false; D.gestion = j.gestion; if (tab === "gestion") pintar(); }).catch(function(e){ ges.cargando = false; $("vista").innerHTML = '<div class="banner bad">' + esc(e.message) + '</div>'; }); }
+    return;
+  }
+  var G = D.gestion, T = G.totales, A = G.archivos || {}, act = G.actualizado;
+  var h = '<div class="ges-cab"><div><h2>Gestión de cobranzas</h2><div class="help" style="margin:0">' +
+    (A.cartera ? 'Cartera: ' + esc(A.cartera.archivo) + ' · ' + esc(A.cartera.detalle) + '. ' : 'Sin archivo de cartera. ') + 'Saldos bancarios al ' + dmy(D.meta.fecha_saldos) + '.' +
+    (act && act.ts ? ' Última actualización de cobranzas: ' + esc(fechaHora(act.ts)) + (act.por ? ' por ' + esc(act.por) : '') + '.' : '') + '</div></div>' +
+    '<div class="acc"><input type="file" id="ges_archivo" accept=".xlsx,.xlsm" class="hidden"><button class="btn ghost" id="ges_subir"' + (ges.ocupado ? " disabled" : "") + '>Subir cartera de Tango o pronóstico</button>' +
+    '<button class="btn ghost" id="ges_actualizar"' + (ges.ocupado ? " disabled" : "") + ' title="Vuelve a leer la cartera y el pronóstico de ventas de Drive y recalcula el flujo">' + (ges.ocupado ? "Actualizando…" : "Actualizar desde Drive") + '</button></div></div>';
+  if (G.en_curso) h += '<div class="banner ges-msg">Se está corriendo la actualización general del informe. Lo que guardes entra al flujo cuando termine, en unos minutos.</div>';
+  if (ges.msg) h += '<div class="banner ges-msg' + ges.msg.cls + '" role="status">' + ges.msg.html + '</div>';
+  h += '<div class="kpis">' + kpi("Cartera a cobrar", MM(T.importe), T.facturas + " facturas abiertas (con IVA)", "") +
+    kpi("Vencida", MM(T.vencido), pct(T.vencido / (T.importe || 1)) + " de la cartera" + (T.sin_gestion_vencidas ? " · " + T.sin_gestion_vencidas + " sin gestión" : ""), T.vencido > 0 ? "bad" : "ok") +
+    kpi("Con fecha comprometida", T.con_fecha + (T.con_fecha === 1 ? " factura" : " facturas"), MM(T.importe_con_fecha), T.con_fecha ? "ok" : "") +
+    kpi("Promesas vencidas", T.promesas_vencidas + (T.promesas_vencidas === 1 ? " factura" : " facturas"), T.promesas_vencidas ? MM(T.importe_promesas) + " · hay que poner fecha nueva" : "Ninguna", T.promesas_vencidas ? "bad" : "ok") +
+    kpi("Fuera del flujo", T.fuera + (T.fuera === 1 ? " factura" : " facturas"), T.fuera ? MM(T.importe_fuera) + " en disputa o demoradas" : "Ninguna en disputa", T.fuera ? "warn" : "") + '</div>';
+  h += '<div class="panel"><div class="barra" style="margin-bottom:10px"><h3 style="margin:0">Cobranza de las próximas 13 semanas</h3><div class="seg" role="group" aria-label="Empresa">' + ["GRUPO","HC","PM"].map(function(e){ return '<button data-gent="' + e + '" aria-pressed="' + (e === ges.ent) + '">' + NOMBRE[e] + '</button>'; }).join("") + '</div></div>' +
+    gesSemanal() + '<div class="help">Así queda la cobranza del flujo con lo que está cargado. Las ventas nuevas salen del pronóstico de ventas; los echeqs, del archivo de Tesorería.</div></div>';
+  var chips = [["todas", "Todas"], ["vencidas", "Vencidas"], ["sin_fecha", "Sin fecha comprometida"], ["promesas", "Promesas vencidas"], ["cambios", "Con cambios"]];
+  h += '<div class="panel"><h3>Cartera por cliente</h3><div class="ges-filtros"><input type="search" id="ges_q" placeholder="Buscar cliente o comprobante" aria-label="Buscar cliente o comprobante" value="' + esc(ges.q) + '">' +
+    '<div class="seg" role="group" aria-label="Filtro">' + chips.map(function(c){ return '<button data-gfil="' + c[0] + '" aria-pressed="' + (ges.filtro === c[0]) + '">' + c[1] + '</button>'; }).join("") + '</div></div>' +
+    '<div id="ges_tabla">' + gesTabla() + '</div>' +
+    '<div class="help"><b>Cómo entra al flujo.</b> Con fecha comprometida, la factura se cobra esa semana, completa. Sin fecha, se toma el vencimiento (lo vencido, en la semana 2). ' +
+    '«Ya cobrada» con fecha anterior a los saldos la saca del flujo, porque el banco ya la tiene. «En disputa / demorada» sin fecha la deja fuera de las 13 semanas. ' +
+    'Si una fecha comprometida pasa y la factura sigue abierta, queda como promesa vencida hasta que cargues una fecha nueva.</div></div>';
+  h += '<div class="ges-guardar hidden" id="ges_guardar_caja"><span id="ges_guardar_txt"></span><span class="acc"><button class="btn ghost" id="ges_descartar">Descartar</button><button class="btn" id="ges_guardar"' + (ges.ocupado ? " disabled" : "") + '>Guardar y actualizar el flujo</button></span></div>';
+  if ((G.historial || []).length) h += '<details class="panel"><summary><b>Últimos cambios cargados</b></summary><div class="scrollx"><table class="tl" style="margin-top:8px"><thead><tr><th>Cuándo</th><th>Quién</th><th>Cliente</th><th>Comprobante</th><th>Antes</th><th>Después</th></tr></thead><tbody>' +
+    G.historial.map(function(x){ var d = function(o){ var e = (G.estados.filter(function(k){ return k[0] === o.estado; })[0] || [])[1]; return [o.fecha ? dmy(o.fecha) : "", e || "", o.nota || ""].filter(Boolean).map(esc).join(" · ") || "—"; };
+      return '<tr><td>' + esc(fechaHora(x.ts)) + '</td><td>' + esc(x.usuario) + '</td><td>' + esc(x.cliente || "") + '</td><td>' + esc(x.comprobante || "") + '</td><td>' + d(x.antes) + '</td><td>' + d(x.despues) + '</td></tr>'; }).join("") + '</tbody></table></div></details>';
+  $("vista").innerHTML = h; gesBarra();
+  $("ges_subir").onclick = function(){ $("ges_archivo").click(); };
+  $("ges_archivo").onchange = function(){
+    var a = this.files[0]; if (!a) return;
+    if (gesCambios(G).length && !confirm("Tenés cambios sin guardar; subir el archivo los descarta. ¿Seguir?")) { this.value = ""; return; }
+    if (a.size > 8 * 1024 * 1024) return gesFalla(new Error("El archivo supera los 8 MB."));
+    var fr = new FileReader();
+    fr.onload = function(){ ges.ocupado = true; ges.msg = {html: "Leyendo " + esc(a.name) + " y recalculando el flujo…", cls: ""}; pintar();
+      llamar("POST", "/api/v1/cobranzas/subir", {nombre: a.name, contenido_b64: String(fr.result).split(",")[1] || ""}).then(gesRecibir).catch(gesFalla); };
+    fr.onerror = function(){ gesFalla(new Error("No pude leer el archivo.")); };
+    fr.readAsDataURL(a);
+  };
+  $("ges_actualizar").onclick = function(){
+    if (gesCambios(G).length && !confirm("Tenés cambios sin guardar; actualizar los descarta. ¿Seguir?")) return;
+    ges.ocupado = true; ges.msg = {html: "Leyendo la cartera y el pronóstico, y recalculando el flujo…", cls: ""}; pintar();
+    llamar("POST", "/api/v1/cobranzas/actualizar", {}).then(gesRecibir).catch(gesFalla);
+  };
+  $("ges_descartar").onclick = function(){ ges.ed = {}; pintar(); };
+  $("ges_guardar").onclick = function(){
+    var c = gesCambios(G).map(function(f){ var v = ges.ed[f.clave]; return {clave: f.clave, fecha: v.fecha || null, estado: v.estado, nota: v.nota}; });
+    if (!c.length) return;
+    ges.ocupado = true; this.disabled = true; this.textContent = "Guardando…";
+    llamar("PUT", "/api/v1/cobranzas/gestion", {cambios: c}).then(gesRecibir).catch(function(e){ ges.ocupado = false; var b = $("ges_guardar"); if (b) { b.disabled = false; b.textContent = "Guardar y actualizar el flujo"; } alert(e.message); });
+  };
+  $("ges_q").oninput = function(){ ges.q = this.value; $("ges_tabla").innerHTML = gesTabla(); };
+}
+function gesEditar(t){
+  var G = D.gestion, tr = t.closest("tr[data-fac]");
+  if (t.hasAttribute("data-cli")) {                           // misma fecha para todas las facturas visibles del cliente
+    var cli = t.getAttribute("data-cli"), val = t.value;
+    G.facturas.filter(function(f){ return f.cliente === cli && gesPasa(f); }).forEach(function(f){ var v = gesValor(f); ges.ed[f.clave] = {fecha: val, estado: v.estado === "cobrada" ? "" : v.estado, nota: v.nota}; });
+    $("ges_tabla").innerHTML = gesTabla(); gesBarra(); return;
+  }
+  if (!tr) return;
+  var f = G.facturas.filter(function(x){ return x.clave === tr.getAttribute("data-fac"); })[0]; if (!f) return;
+  var v = Object.assign({}, gesValor(f)); v[t.getAttribute("data-g")] = t.value; ges.ed[f.clave] = v;
+  var b = gesBase(f); tr.classList.toggle("cambio", v.fecha !== b.fecha || v.estado !== b.estado || v.nota !== b.nota); gesBarra();
+}
+window.addEventListener("beforeunload", function(ev){ if (D && D.gestion && gesCambios(D.gestion).length) { ev.preventDefault(); ev.returnValue = ""; } });
 var nivelV = 2, todosV = false;
 function vistaVentas(){
   var V = D.ventas;
@@ -940,6 +1115,9 @@ function selloLectura(r, admin){
   if (c && c.total) it.push('<span>Controles automáticos: <b>' + c.total + '</b> · ' + c.ok + ' sin observaciones' + (c.nota ? ' · ' + c.nota + ' con nota' : '') + (c.alerta ? ' · ' + c.alerta + ' en alerta' : '') + '</span>');
   if (admin ? r.aprobado : true) it.push('<span>Aprobada por <b>' + esc(firma) + '</b>' + (r.aprobado_ts ? ' el ' + esc(fechaHora(r.aprobado_ts)) : '') + '</span>');
   else if (admin) it.push('<span>Todavía sin aprobar</span>');
+  var ar = s.arrastre;
+  if (ar) it.push('<span class="nota" style="color:var(--ink-2)">▲ El equipo de Cobranzas actualizó el flujo el ' + esc(fechaHora(ar.ts)) + ', después de escrita esta lectura' +
+    (ar.cifras_citadas ? ': ' + ar.cifras_vigentes + ' de ' + ar.cifras_citadas + ' cifras citadas siguen iguales en el informe actual.' : '.') + '</span>');
   var nota = !s.con_ia ? 'Escrita por ' + esc(firma) + ' a partir de las cifras de este informe.'
     : 'Redactada con inteligencia artificial a partir de las cifras de este informe' + (s.editado ? ' y editada por ' + esc(firma) + ' antes de aprobarla' : '') + '. Los controles los corre el sistema, sin IA.';
   return '<div class="sello">' + it.join("") + '<span class="nota">' + nota + '</span></div>';
@@ -1147,9 +1325,12 @@ $("ia_q").onkeydown = function(ev){ if (ev.key === "Enter" && !ev.shiftKey) { ev
 document.addEventListener("keydown", function(ev){ if (ev.key === "Escape" && $("ia_panel").classList.contains("abierto")) $("ia_cerrar").onclick(); });
 function pintar(){
   if (!D) return;
+  var rolAct = (D.publicacion || {}).rol;
+  if (rolAct === "cobranzas" && tab !== "gestion" && tab !== "ventas") { tab = "gestion"; marcarTab(); }
+  if (tab === "gestion" && rolAct !== "admin" && rolAct !== "cobranzas") { tab = "resumen"; marcarTab(); }
   encabezado(); configurarChat();
-  if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
-  $("pie").textContent = "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
+  if (tab === "gestion") vistaGestion(); else if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
+  $("pie").textContent = rolAct === "cobranzas" ? "FINETIA · Panel del equipo de Cobranzas · Lo que guardás entra al flujo en el momento." : "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
 }
 function marcarTab(){ document.querySelectorAll("nav.tabs button").forEach(function(x){ x.setAttribute("aria-selected", x.getAttribute("data-tab") === tab); }); }
 document.querySelectorAll("nav.tabs button").forEach(function(b){
@@ -1166,13 +1347,17 @@ $("vista").addEventListener("click", function(ev){
     b.parentNode.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", String(x.getAttribute("data-dec") === a.decision)); });
     revEstado();
   }
+  else if (b.hasAttribute("data-gent")) { ges.ent = b.getAttribute("data-gent"); pintar(); }
+  else if (b.hasAttribute("data-gfil")) { ges.filtro = b.getAttribute("data-gfil"); pintar(); }
   else if (b.hasAttribute("data-informe")) informeController(+b.getAttribute("data-informe")).catch(function(e){ alert(e.message); });
 });
 $("vista").addEventListener("input", function(ev){
   var t = ev.target;
-  if (t.hasAttribute("data-resp")) { rev.respuestas[+t.getAttribute("data-resp")] = t.value; rev.sucio = true; revEstado(); }
+  if (t.hasAttribute("data-g") || t.hasAttribute("data-cli")) { if (t.type !== "date") gesEditar(t); }
+  else if (t.hasAttribute("data-resp")) { rev.respuestas[+t.getAttribute("data-resp")] = t.value; rev.sucio = true; revEstado(); }
   else if (t.hasAttribute("data-nota")) { var i = +t.getAttribute("data-nota"); (rev.acciones[i] || (rev.acciones[i] = {decision: null, nota: ""})).nota = t.value; rev.sucio = true; revEstado(); }
 });
+$("vista").addEventListener("change", function(ev){ var t = ev.target; if ((t.hasAttribute("data-g") || t.hasAttribute("data-cli")) && (t.type === "date" || t.tagName === "SELECT")) gesEditar(t); });
 document.addEventListener("keydown", function(ev){ if (ev.key === "Escape" && !$("informe_ctl").classList.contains("hidden")) cerrarInforme(); });
 $("vista").addEventListener("input", function(ev){ if (ev.target.id === "rng") { cumpl = +ev.target.value / 100; pintar(); var r = $("rng"); if (r) r.focus(); } });
 (function(){ var t = store.get("gp_tab"); if (t && document.querySelector('nav.tabs button[data-tab="' + t + '"]')) { tab = t; marcarTab(); } })();
