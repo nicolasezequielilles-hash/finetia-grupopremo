@@ -785,7 +785,7 @@ function panelPrecision(){
 function vistaCobranzas(){
   var C = D.cobranzas, t = C.total;
   var h = '<div class="kpis">' + kpi("Cartera a cobrar", MM(t.importe), t.facturas + " facturas abiertas (con IVA)", "") + kpi("Vencida", MM(t.vencido), pct(t.vencido / (t.importe || 1)) + " de la cartera", t.vencido > 0 ? "bad" : "ok") +
-    kpi("A vencer en 30 días", MM(t.a_30), "", "") + kpi("A más de 30 días", MM(t.mas_30), "", "") + kpi("Con fecha real informada", t.con_fecha_real + " facturas", MM(t.importe_fecha_real), "warn") + '</div>';
+    kpi("A vencer en 30 días", MM(t.a_30), "", "") + kpi("A más de 30 días", MM(t.mas_30), "", "") + kpi("Con fecha real informada", t.con_fecha_real + " facturas", MM(t.importe_fecha_real), "warn") + kpiPlazo((D.tango || {}).kpi) + '</div>';
   h += '<div class="grid2">' + ["HC","PM"].map(function(e){ var x = C.por_empresa[e];
     return '<div class="panel"><h3>' + NOMBRE[e] + '</h3><table><tbody><tr><td>Cartera</td><td class="num"><b>' + mm(x.importe) + '</b></td></tr><tr><td>Vencida</td><td class="num neg">' + mm(x.vencido) + '</td></tr><tr><td>A 30 días</td><td class="num">' + mm(x.a_30) + '</td></tr><tr><td>A más de 30 días</td><td class="num">' + mm(x.mas_30) + '</td></tr></tbody></table></div>'; }).join("") + '</div>';
   h += '<div class="panel" style="margin-top:16px"><h3>Principales clientes · en millones de $</h3><div class="scrollx"><table class="tl"><thead><tr><th>Cliente</th><th>Empresa</th><th class="n">Facturas</th><th class="n">Total</th><th class="n">Vencido</th><th class="n">A 30 días</th><th class="n">Más de 30</th><th class="n">Con fecha real</th></tr></thead><tbody>' +
@@ -793,6 +793,8 @@ function vistaCobranzas(){
     (C.otros_clientes ? '<tr class="tot"><td>Otros ' + C.otros_clientes + ' clientes</td><td></td><td></td><td class="num">' + mm(C.importe_otros) + '</td><td></td><td></td><td></td><td></td></tr>' : "") + '</tbody></table></div>' +
     '<div class="help">Echeqs de clientes en cartera: ' + C.echeqs_en_cartera.cantidad + ' por ' + MM(C.echeqs_en_cartera.importe) + '. “Con fecha real” indica que el equipo de Cobranzas informó cuándo se cobra esa factura.' +
     (t.fuera ? ' ' + t.fuera + (t.fuera === 1 ? ' factura por ' : ' facturas por ') + MM(t.importe_fuera) + ' en disputa o demoradas quedaron fuera del flujo de 13 semanas.' : '') +
+    (t.despues ? ' ' + t.despues + (t.despues === 1 ? ' factura por ' : ' facturas por ') + MM(t.importe_despues) + (t.despues === 1 ? ' se espera' : ' se esperan') + ' después de la semana 13, por la fecha comprometida o por lo que tarda en pagar el cliente.' : '') +
+    (D.tango && D.tango.kpi && D.tango.kpi.actual ? ' El plazo real de cobro mide los días entre la emisión y el cobro de lo cobrado en los últimos 90 días, según Tango; el flujo usa esos plazos.' : '') +
     (D.meta.cobranzas_actualizado ? ' Última actualización del equipo de Cobranzas: ' + esc(fechaHora(D.meta.cobranzas_actualizado.ts)) + '.' : '') + '</div></div>';
   $("vista").innerHTML = h;
 }
@@ -811,7 +813,8 @@ function gesEnFlujo(f){
   if (f.efecto === "promesa_vencida") return t + ' <span class="etq bad">Promesa vencida</span>';
   if (f.efecto === "comprometida" || f.efecto === "cobrada") return '<b>' + t + '</b> <span class="etq ok">Fecha comprometida</span>';
   if (f.efecto === "archivo") return t + ' <span class="etq gris">Planilla</span>';
-  return t + (f.dias_vencida ? ' <span class="etq warn">Vencida, sin fecha</span>' : '');
+  return t + (f.plazo_real ? ' <span class="etq gris" title="' + (f.plazo_real.base === "cliente" ? "Lo que tarda en pagar este cliente" : "Promedio de su grupo de clientes") + ', según Tango">paga a ' + f.plazo_real.dias + ' días</span>' : '') +
+    (f.dias_vencida ? ' <span class="etq warn">Vencida, sin fecha</span>' : '');
 }
 function gesFila(f){
   var v = gesValor(f), b = gesBase(f), cambio = v.fecha !== b.fecha || v.estado !== b.estado || v.nota !== b.nota, G = D.gestion;
@@ -852,22 +855,35 @@ function gesSemanal(){
   return '<div class="scrollx"><table class="fl"><thead><tr><th style="text-align:left">En millones de $</th>' + S.map(function(x, i){ return '<th>S' + (i + 1) + '<small>' + dm(x.desde) + '</small></th>'; }).join("") + '<th>13 sem.</th></tr></thead><tbody>' +
     fila("Facturas de la cartera", C.cartera) + fila("Echeqs de clientes en cartera", C.echeqs) + fila("Ventas nuevas (pronóstico)", C.nuevas) + fila("Cobranza total", C.total, "tot") + '</tbody></table></div>';
 }
+function kpiPlazo(K){
+  if (!K || !K.actual) return '';
+  var a = K.actual, b = K.anterior, v = K.variacion;
+  return kpi("Plazo real de cobro", Math.round(a.dias) + " días", "últimos " + K.ventana_dias + " días" + (b ? " · antes " + Math.round(b.dias) + (v <= -1 ? " (mejoró " + Math.round(-v) + ")" : v >= 1 ? " (empeoró " + Math.round(v) + ")" : " (igual)") : ""),
+    !b ? "" : v <= 1 ? "ok" : v > 5 ? "bad" : "warn");
+}
 function gesTango(){
-  var G = D.gestion, T = G.totales, P = G.plazos || {}, R = P.reales || {}, F = P.flujo || {}, emps = Object.keys(R).sort(), arch = (G.archivos || {}).tango || [];
+  var G = D.gestion, T = G.totales, P = G.plazos || {}, R = P.reales || {}, F = P.flujo || {}, O = P.origen || {}, emps = Object.keys(R).sort(), arch = (G.archivos || {}).tango || [], K = (P.kpi || {}).GRUPO;
   if (!emps.length && !arch.length) return '';
-  var h = '<div class="panel"><h3>Lo que sale de los reportes de Tango</h3>';
+  var h = '<div class="panel"><h3>Plazo real de cobro · según Tango</h3>';
   if (T.cobradas_tango) h += '<p style="margin:0 0 10px"><b>' + T.cobradas_tango + (T.cobradas_tango === 1 ? ' factura' : ' facturas') + ' por ' + MM(T.importe_cobradas_tango) + '</b> ' + (T.cobradas_tango === 1 ? 'sigue abierta en la cartera pero Tango ya la da por cobrada' : 'siguen abiertas en la cartera pero Tango ya las da por cobradas') +
     (T.cobradas_tango === 1 ? '. Se marcó sola y el flujo no la vuelve a contar.' : '. Se marcaron solas y el flujo no las vuelve a contar.') + '</p>';
+  if (K && K.meses && K.meses.length) h += '<div class="scrollx"><table class="ges" style="margin-bottom:12px"><thead><tr><th>Cobrado en</th>' + K.meses.map(function(m){ return '<th class="n">' + MES_CORTO(m.mes) + '</th>'; }).join("") + '</tr></thead><tbody>' +
+    '<tr><td>Días de emisión a cobro</td>' + K.meses.map(function(m){ return '<td class="num"><b>' + Math.round(m.dias) + '</b></td>'; }).join("") + '</tr>' +
+    '<tr><td>Facturas cobradas</td>' + K.meses.map(function(m){ return '<td class="num">' + m.n + '</td>'; }).join("") + '</tr>' +
+    '<tr><td>Importe cobrado</td>' + K.meses.map(function(m){ return '<td class="num">' + MM(m.importe) + '</td>'; }).join("") + '</tr></tbody></table></div>';
   var filas = [];
   emps.forEach(function(e){ [["aesa", "A-Evangelista"], ["resto", "Resto de los clientes"]].forEach(function(c){ var r = (R[e] || {})[c[0]]; if (!r) return;
-    var d = F[c[0]] == null ? null : r.dias - F[c[0]];
-    filas.push('<tr><td style="text-align:left">' + NOMBRE[e] + ' · ' + c[1] + '</td><td class="num"><b>' + Math.round(r.dias) + ' días</b></td><td class="num">' + (F[c[0]] == null ? "—" : F[c[0]] + " días") + '</td><td class="num">' + r.n + '</td><td class="num">' + MM(r.importe) + '</td><td style="text-align:left">' +
-      (d == null ? "" : d > 7 ? '<span class="etq warn">Se cobra ' + Math.round(d) + ' días más tarde</span>' : d < -7 ? '<span class="etq ok">Se cobra antes</span>' : '<span class="etq ok">En línea</span>') + '</td></tr>'); }); });
-  if (filas.length) h += '<div class="scrollx"><table class="ges"><thead><tr><th>Plazo real de cobro</th><th class="n">Real<small>emisión a cobro</small></th><th class="n">El flujo usa</th><th class="n">Facturas</th><th class="n">Cobrado</th><th></th></tr></thead><tbody>' + filas.join("") + '</tbody></table></div>' +
-    '<div class="help">Días entre la emisión y el cobro de lo cobrado en los últimos 6 meses, ponderado por importe. El flujo usa su plazo para las ventas nuevas del pronóstico; todavía no se cambió por el real.</div>';
+    filas.push('<tr><td>' + NOMBRE[e] + ' · ' + c[1] + '</td><td class="num"><b>' + Math.round(r.dias) + ' días</b></td><td class="num">' + r.n + '</td><td class="num">' + MM(r.importe) + '</td></tr>'); });
+    ((P.clientes || {})[e] || []).slice(0, 8).forEach(function(c){ filas.push('<tr><td style="padding-left:22px;color:var(--ink-2)">' + esc(c.cliente) + '</td><td class="num">' + Math.round(c.dias) + ' días</td><td class="num">' + c.n + '</td><td class="num">' + MM(c.importe) + '</td></tr>'); }); });
+  if (filas.length) h += '<div class="scrollx"><table class="ges"><thead><tr><th>Lo cobrado en los últimos 6 meses</th><th class="n">Plazo real<small>emisión a cobro</small></th><th class="n">Facturas</th><th class="n">Cobrado</th></tr></thead><tbody>' + filas.join("") + '</tbody></table></div>';
+  var sinRep = ["HC", "PM"].filter(function(e){ return emps.indexOf(e) < 0; });
+  h += '<div class="help"><b>El flujo ya usa estos plazos.</b> Cada factura abierta se espera a los días que tarda en pagar ese cliente (si tiene 3 facturas cobradas o más) o, si no, su grupo de clientes; nunca antes del vencimiento pactado por un promedio. ' +
+    'Las ventas nuevas del pronóstico se cobran a ' + (F.aesa != null ? F.aesa + ' días en A-Evangelista y ' : '') + (F.resto != null ? F.resto + ' días en el resto' : '') + '. Se recalcula solo con cada reporte de cobranzas.' +
+    (sinRep.length ? ' <span class="warnline">Falta el reporte de cobranzas de Tango de ' + sinRep.map(function(e){ return NOMBRE[e]; }).join(" y ") + ': para esa empresa se sigue usando el vencimiento pactado.</span>' : '') + '</div>';
   if (arch.length) h += '<div class="help">' + arch.map(function(a){ return esc(a.archivo) + ' · ' + esc(a.detalle); }).join(' &nbsp;|&nbsp; ') + '</div>';
   return h + '</div>';
 }
+function MES_CORTO(ym){ return ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"][+ym.slice(5, 7) - 1] + " " + ym.slice(2, 4); }
 function gesMensaje(j){
   var f = j.flujo || {}, g = j.guardado, t = [], cls = "";
   if (j.subido) t.push('Se cargó el archivo <b>' + esc(j.subido.nombre) + '</b> como ' + esc(j.subido.que) + '.');
@@ -899,7 +915,7 @@ function vistaGestion(){
     '<button class="btn ghost" id="ges_actualizar"' + (ges.ocupado ? " disabled" : "") + ' title="Vuelve a leer la cartera y el pronóstico de ventas de Drive y recalcula el flujo">' + (ges.ocupado ? "Actualizando…" : "Actualizar desde Drive") + '</button></div></div>';
   if (G.en_curso) h += '<div class="banner ges-msg">Se está corriendo la actualización general del informe. Lo que guardes entra al flujo cuando termine, en unos minutos.</div>';
   if (ges.msg) h += '<div class="banner ges-msg' + ges.msg.cls + '" role="status">' + ges.msg.html + '</div>';
-  h += '<div class="kpis">' + kpi("Cartera a cobrar", MM(T.importe), T.facturas + " facturas abiertas (con IVA)", "") +
+  h += '<div class="kpis">' + kpiPlazo(((G.plazos || {}).kpi || {}).GRUPO) + kpi("Cartera a cobrar", MM(T.importe), T.facturas + " facturas abiertas (con IVA)", "") +
     kpi("Vencida", MM(T.vencido), pct(T.vencido / (T.importe || 1)) + " de la cartera" + (T.sin_gestion_vencidas ? " · " + T.sin_gestion_vencidas + " sin gestión" : ""), T.vencido > 0 ? "bad" : "ok") +
     kpi("Con fecha comprometida", T.con_fecha + (T.con_fecha === 1 ? " factura" : " facturas"), MM(T.importe_con_fecha), T.con_fecha ? "ok" : "") +
     kpi("Promesas vencidas", T.promesas_vencidas + (T.promesas_vencidas === 1 ? " factura" : " facturas"), T.promesas_vencidas ? MM(T.importe_promesas) + " · hay que poner fecha nueva" : "Ninguna", T.promesas_vencidas ? "bad" : "ok") +
@@ -911,7 +927,7 @@ function vistaGestion(){
   h += '<div class="panel"><h3>Cartera por cliente</h3><div class="ges-filtros"><input type="search" id="ges_q" placeholder="Buscar cliente o comprobante" aria-label="Buscar cliente o comprobante" value="' + esc(ges.q) + '">' +
     '<div class="seg" role="group" aria-label="Filtro">' + chips.map(function(c){ return '<button data-gfil="' + c[0] + '" aria-pressed="' + (ges.filtro === c[0]) + '">' + c[1] + '</button>'; }).join("") + '</div></div>' +
     '<div id="ges_tabla">' + gesTabla() + '</div>' +
-    '<div class="help"><b>Cómo entra al flujo.</b> Con fecha comprometida, la factura se cobra esa semana, completa. Sin fecha, se toma el vencimiento (lo vencido, en la semana 2). ' +
+    '<div class="help"><b>Cómo entra al flujo.</b> Con fecha comprometida, la factura se cobra esa semana, completa. Sin fecha, se toma el plazo real de cobro del cliente según Tango o, si no hay reporte, el vencimiento (lo ya vencido, en la semana 2). ' +
     '«Ya cobrada» con fecha anterior a los saldos la saca del flujo, porque el banco ya la tiene. «En disputa / demorada» sin fecha la deja fuera de las 13 semanas. ' +
     'Si una fecha comprometida pasa y la factura sigue abierta, queda como promesa vencida hasta que cargues una fecha nueva.</div></div>';
   h += '<div class="ges-guardar hidden" id="ges_guardar_caja"><span id="ges_guardar_txt"></span><span class="acc"><button class="btn ghost" id="ges_descartar">Descartar</button><button class="btn" id="ges_guardar"' + (ges.ocupado ? " disabled" : "") + '>Guardar y actualizar el flujo</button></span></div>';
