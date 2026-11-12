@@ -689,7 +689,7 @@ function panelAgenda(corta, quien){
   h += kp + '<div class="scrollx"><table class="tl ag"><thead><tr><th>Fecha</th><th class="n">Días</th><th>Vencimiento</th><th>Empresa</th><th class="n">Importe</th><th>Qué pasa ese día</th></tr></thead><tbody>' +
     its.map(function(x){ var ren_ = x.estado === "renovada";
       return '<tr' + (ren_ ? ' class="ag-ren"' : '') + '><td class="num">' + fecha(x) + '</td><td class="num">' + (x.dias >= 0 && !ren_ ? x.dias : "—") + '</td><td><b>' + esc(x.tipo) + '</b>' + (x.detalle || ren_ ? '<br><span class="help" style="margin:0">' + esc(x.detalle) + (ren_ ? " · último vencimiento registrado " + dmy(x.fecha).slice(0, 5) : "") + '</span>' : '') + '</td><td>' + (NOMBRE[x.emp] || x.emp) + '</td><td class="num">' + (x.importe === null || x.importe === undefined ? "—" : '<b>' + mm(x.importe) + '</b>') + '</td><td class="wrapc">' + esc(x.nota || "") + '</td></tr>'; }).join("") + '</tbody></table></div>' +
-    '<div class="help">En millones de pesos. Solo deuda financiera y fiscal con fecha: cauciones, echeqs propios descontados, cuotas de préstamos, planes de ARCA y el certificado de no retención de IVA. Los pagos a proveedores y los sueldos están en el flujo de caja.</div></div>';
+    '<div class="help">En millones de pesos. Solo deuda financiera y fiscal con fecha: cauciones, echeqs propios descontados, cuotas de préstamos, planes de ARCA, el certificado de no retención de IVA y el vencimiento de los títulos en garantía. Los pagos a proveedores y los sueldos están en el flujo de caja.</div></div>';
   return h;
 }
 // Lo que hay que mirar: las alertas de la entidad elegida y los importes vencidos, en una sola lista corta (antes estaban repartidos en dos bloques).
@@ -1056,15 +1056,46 @@ function panelCosto(){
     '<tr class="tot"><td>Total con tasa</td><td class="num">' + mm(G.saldo) + '</td><td class="num">' + NF1.format(G.tna_ponderada * 100) + '%</td><td>' + bar(G.tna_ponderada, "var(--accent-deep)") + '</td><td class="num">' + mm(G.costo_anual) + '</td><td class="num">100%</td></tr></tbody></table></div>' +
     '<div class="help">En millones de pesos. Incluye descubierto, cauciones, echeqs descontados, planes de ARCA y préstamos bancarios; los proveedores y otros pasivos no tienen tasa explícita. Costo anual = saldo × TNA, sin renegociaciones ni cambios de saldo. Las tasas son parámetros del informe.</div></div>';
 }
+var EST_GAR = {usada: ["Usada por completo", ""], parcial: ["Con disponibilidad", "ok"], libre: ["Libre", "ok"]};
+function usd(v){ return "US$ " + NF0.format(Math.round(v || 0)); }
+function panelGarantias(){
+  var G = D.garantias; if (!G) return "";
+  var C = G.cobertura, disp = G.parcial_usd + G.libre_usd, hoy = D.meta.hoy;
+  var dv = G.proximo_vto ? Math.max(0, Math.round((new Date(G.proximo_vto + "T00:00:00") - new Date(hoy + "T00:00:00")) / 864e5)) : null, venc = G.proximo_vto ? dmy(G.proximo_vto) : "—";
+  var h = '<div class="panel"><h3>Garantías · activos en dólares que respaldan los acuerdos bancarios</h3><div class="kpis">' +
+    kpi("Garantías totales", usd(G.total_usd), G.tipo_cambio ? "≈ " + MM(G.total_pesos) + " a $" + NF0.format(G.tipo_cambio) + " por dólar" : "sin tipo de cambio cargado", "") +
+    kpi("Usadas por completo", usd(G.usada_usd), pct(G.usada_usd / (G.total_usd || 1)) + " del total", "") +
+    kpi("Con disponibilidad", usd(disp), disp ? "a confirmar cuánto está libre en cada custodio" : "toda la garantía está tomada", disp ? "" : "warn") +
+    kpi("Próximo vencimiento", venc, (dv !== null ? "en " + dv + " días · " : "") + (G.titulos_usd ? "títulos " + usd(G.titulos_usd) + " · efectivo " + usd(G.efectivo_usd) : ""), dv !== null && dv <= 60 ? "warn" : "") + '</div>';
+  if (C) {
+    h += '<div class="help" style="margin:0 0 10px"><b>Cobertura.</b> El acuerdo de Hormigones Cardales (' + MM(C.acuerdo_eecc) + ') se respalda con el balance (EECC); el resto, ' + MM(C.acuerdo_respaldado) + ', con estas garantías. ' +
+      (C.veces_tomada ? 'Las garantías usadas valen ' + MM(C.garantia_tomada_pesos) + ' (<b>' + NF2(C.veces_tomada) + ' veces</b> el acuerdo)' + (C.veces_total ? ' y con las que tienen disponibilidad, ' + NF2(C.veces_total) + ' veces' : '') + '. ' : '') +
+      'Las usadas cubren el acuerdo mientras el dólar no baje de <b>$' + NF0.format(Math.round(C.tc_equilibrio_tomada || 0)) + '</b>' + (G.tipo_cambio ? ' (hoy $' + NF0.format(G.tipo_cambio) + ')' : '') + '.</div>';
+  }
+  var filas = "";
+  G.custodios.forEach(function(c){
+    var e = EST_GAR[c.estado];
+    filas += '<tr class="tot"><td colspan="4"><b>' + esc(c.custodio) + '</b>' + (c.respalda.length ? ' <span class="help" style="margin:0">· respalda ' + esc(c.respalda.join(", ")) + '</span>' : '') + '</td><td class="num"><b>' + usd(c.valor_usd) + '</b></td><td></td><td><span class="pill ' + e[1] + '">' + e[0] + '</span></td></tr>';
+    c.items.forEach(function(g){
+      var r = g.resultado_usd, ge = EST_GAR[g.estado];
+      filas += '<tr><td style="padding-left:22px">' + esc(g.instrumento) + (g.obs ? '<div class="help" style="margin:0;max-width:300px;white-space:normal">' + esc(g.obs) + '</div>' : '') + '</td><td class="num">' + (g.vto ? dmy(g.vto) : "—") + '</td><td class="num">' + (g.dias === null || g.dias === undefined ? "—" : (g.dias >= 0 ? g.dias : "vencido")) + '</td><td class="num">' + (g.vn ? NF0.format(g.vn) : "—") + '</td><td class="num">' + usd(g.valor_usd) + '</td><td class="num' + (r < 0 ? " neg" : "") + '">' + (r === null || r === undefined ? "—" : (r >= 0 ? "+" : "−") + NF0.format(Math.abs(Math.round(r)))) + '</td><td><span class="pill ' + ge[1] + '">' + ge[0] + '</span></td></tr>';
+    });
+  });
+  h += '<div class="scrollx"><table class="tl"><thead><tr><th>Custodio / instrumento</th><th class="n">Vence</th><th class="n">Días</th><th class="n">Valor nominal</th><th class="n">Valor de mercado</th><th class="n">Resultado US$</th><th>Estado</th></tr></thead><tbody>' + filas +
+    '<tr class="tot"><td colspan="4">Total</td><td class="num"><b>' + usd(G.total_usd) + '</b></td><td></td><td></td></tr></tbody></table></div>' +
+    '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías). "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo.</div></div>';
+  return h;
+}
 function vistaDeuda(){
   var R = D.deuda.resumen, G = R.GRUPO, A = D.deuda.arca, P = D.deuda.proveedores, S = D.deuda.pasivos;
   var h = '<div class="kpis">' + kpi("Deuda total del grupo", MM(G.total), "sin operaciones entre empresas", "") + kpi("Deuda financiera", MM(G.descubierto + G.cauciones + G.echeqs + (G.prestamos || 0)), "descubierto, cauciones, echeqs y préstamos · " + pct((G.descubierto + G.cauciones + G.echeqs + (G.prestamos || 0)) / (G.total || 1)) + " del total", "") + ETQ.map(function(l, i){ return kpi(l, MM(G[CLV[i]]), pct(G[CLV[i]] / (G.total || 1)) + " del total", ""); }).join("") + '</div>';
   h += panelAgenda(false, "GRUPO");
+  h += panelGarantias();
   h += panelCosto();
   h += '<div class="panel"><h3>Composición de la deuda · en millones de $</h3><div class="legend"><span><i style="background:var(--s1);border:1px solid var(--s1)"></i>Hormigones Cardales</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Premoldeados</span></div><div id="ch_deu"></div>' +
     '<div class="scrollx"><table style="margin-top:10px"><thead><tr><th></th>' + ETQ.map(function(l){ return '<th>' + l + '</th>'; }).join("") + '<th>Total</th></tr></thead><tbody>' +
     ["GRUPO","HC","PM"].map(function(e){ var r = R[e]; return '<tr' + (e === "GRUPO" ? ' class="tot"' : "") + '><td>' + NOMBRE[e] + '</td>' + CLV.map(function(k){ return '<td class="num">' + mm(r[k]) + '</td>'; }).join("") + '<td class="num"><b>' + mm(r.total) + '</b></td></tr>'; }).join("") + '</tbody></table></div>' +
-    '<div class="help">El descubierto es lo usado hoy de los acuerdos con los bancos. Las cauciones se toman por su capital: el interés se capitaliza al renovar. Las garantías (por ejemplo el T-Bill que respalda el descubierto de PM) se muestran aparte y no suman.</div></div>';
+    '<div class="help">El descubierto es lo usado hoy de los acuerdos con los bancos. Las cauciones se toman por su capital: el interés se capitaliza al renovar. Las garantías (activos en dólares que respaldan los acuerdos) se muestran aparte y no suman a la deuda.</div></div>';
   h += '<div class="panel"><h3>Planes de ARCA</h3>' + (A.planes.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Plan</th><th>Empresa</th><th class="n">Cuotas pendientes</th><th class="n">Saldo</th><th class="n">Cuotas vencidas</th><th class="n">Importe vencido</th><th class="n">Próxima cuota</th><th class="n">Se paga hasta</th></tr></thead><tbody>' +
     A.planes.map(function(p){ return '<tr><td>' + esc(p.plan) + '</td><td>' + p.emp + '</td><td class="num">' + p.cuotas + '</td><td class="num"><b>' + mm(p.saldo) + '</b></td><td class="num' + (p.vencidas ? " neg" : "") + '">' + (p.vencidas || "—") + '</td><td class="num' + (p.vencidas ? " neg" : "") + '">' + (p.vencidas ? mm(p.importe_vencido) : "—") + '</td><td class="num">' + dmy(p.proximo_vto) + '</td><td class="num">' + (p.proximo_limite ? dmy(p.proximo_limite) : "—") + '</td></tr>'; }).join("") +
     '<tr class="tot"><td>Total</td><td></td><td></td><td class="num">' + mm(A.saldo.HC + A.saldo.PM) + '</td><td></td><td class="num neg">' + mm(A.vencido.HC + A.vencido.PM) + '</td><td></td><td></td></tr></tbody></table></div>' : '<div class="help">Sin planes de ARCA pendientes.</div>') + '</div>';
