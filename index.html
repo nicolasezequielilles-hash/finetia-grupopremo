@@ -378,6 +378,7 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
     <button role="tab" data-tab="cobranzas" aria-selected="false">Cobranzas</button>
     <button role="tab" data-tab="ventas" aria-selected="false">Proyección de ventas</button>
     <button role="tab" data-tab="deuda" aria-selected="false">Deuda</button>
+    <button role="tab" data-tab="garantias" aria-selected="false">Garantías</button>
     <button role="tab" data-tab="gestion" id="tab_gestion" aria-selected="false" hidden>Gestión de cobranzas</button>
     <button role="tab" data-tab="admin" id="tab_admin" aria-selected="false" hidden>Administración</button>
   </div></nav>
@@ -1060,7 +1061,9 @@ var EST_GAR = {usada: ["Usada por completo", ""], parcial: ["Con disponibilidad"
 function usd(v){ return "US$ " + NF0.format(Math.round(v || 0)); }
 function panelGarantias(){
   var G = D.garantias;
-  if (!G) return (D.publicacion && D.publicacion.rol === "admin") ? '<div class="panel"><h3>Garantías</h3><div class="help">Este informe todavía no trae garantías. Se leen de la hoja «Garantías» de la planilla de Pasivos (carpeta Pasivos de Drive): tiene que tener al menos una fila con custodio, instrumento y valor de mercado en dólares. Si la planilla se cambió después de la última actualización, tocá «Actualizar ahora». Los accionistas ven este bloque cuando haya datos y el informe esté publicado.</div></div>' : "";
+  if (!G) return '<div class="panel"><h3>Garantías</h3><div class="help">' + ((D.publicacion && D.publicacion.rol === "admin") ?
+    'Este informe todavía no trae garantías. Se leen de la hoja «Garantías» de la planilla de Pasivos (carpeta Pasivos de Drive): tiene que tener al menos una fila con custodio, instrumento y valor de mercado en dólares. Si la planilla se cambió después de la última actualización, tocá «Actualizar ahora». Los accionistas la ven cuando el informe con garantías esté publicado.' :
+    'El informe publicado todavía no incluye las garantías. Aparecen apenas se publique la próxima actualización.') + '</div></div>';
   var C = G.cobertura, disp = G.parcial_usd + G.libre_usd, hoy = D.meta.hoy;
   var dv = G.proximo_vto ? Math.max(0, Math.round((new Date(G.proximo_vto + "T00:00:00") - new Date(hoy + "T00:00:00")) / 864e5)) : null, venc = G.proximo_vto ? dmy(G.proximo_vto) : "—";
   var h = '<div class="panel"><h3>Garantías · activos en dólares que respaldan los acuerdos bancarios</h3><div class="kpis">' +
@@ -1098,11 +1101,11 @@ function panelGarantias(){
     '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías), valuados como dólar CCL: los dólares MEP se muestran netos del canje a CCL. "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo.</div></div>';
   return h;
 }
+function vistaGarantias(){ $("vista").innerHTML = panelGarantias(); }
 function vistaDeuda(){
   var R = D.deuda.resumen, G = R.GRUPO, A = D.deuda.arca, P = D.deuda.proveedores, S = D.deuda.pasivos;
   var h = '<div class="kpis">' + kpi("Deuda total del grupo", MM(G.total), "sin operaciones entre empresas", "") + kpi("Deuda financiera", MM(G.descubierto + G.cauciones + G.echeqs + (G.prestamos || 0)), "descubierto, cauciones, echeqs y préstamos · " + pct((G.descubierto + G.cauciones + G.echeqs + (G.prestamos || 0)) / (G.total || 1)) + " del total", "") + ETQ.map(function(l, i){ return kpi(l, MM(G[CLV[i]]), pct(G[CLV[i]] / (G.total || 1)) + " del total", ""); }).join("") + '</div>';
   h += panelAgenda(false, "GRUPO");
-  h += panelGarantias();
   h += panelCosto();
   h += '<div class="panel"><h3>Composición de la deuda · en millones de $</h3><div class="legend"><span><i style="background:var(--s1);border:1px solid var(--s1)"></i>Hormigones Cardales</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Premoldeados</span></div><div id="ch_deu"></div>' +
     '<div class="scrollx"><table style="margin-top:10px"><thead><tr><th></th>' + ETQ.map(function(l){ return '<th>' + l + '</th>'; }).join("") + '<th>Total</th></tr></thead><tbody>' +
@@ -1407,7 +1410,7 @@ function pintar(){
   if (rolAct === "cobranzas" && tab !== "gestion" && tab !== "ventas") { tab = "gestion"; marcarTab(); }
   if (tab === "gestion" && rolAct !== "admin" && rolAct !== "cobranzas") { tab = "resumen"; marcarTab(); }
   encabezado(); configurarChat();
-  if (tab === "gestion") vistaGestion(); else if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
+  if (tab === "gestion") vistaGestion(); else if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "garantias") vistaGarantias(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
   $("pie").textContent = rolAct === "cobranzas" ? "FINETIA · Panel del equipo de Cobranzas · Lo que guardás entra al flujo en el momento." : "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
 }
 function marcarTab(){ document.querySelectorAll("nav.tabs button").forEach(function(x){ x.setAttribute("aria-selected", x.getAttribute("data-tab") === tab); }); }
