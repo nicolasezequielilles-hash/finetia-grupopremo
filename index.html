@@ -1059,7 +1059,8 @@ function panelCosto(){
 var EST_GAR = {usada: ["Usada por completo", ""], parcial: ["Con disponibilidad", "ok"], libre: ["Libre", "ok"]};
 function usd(v){ return "US$ " + NF0.format(Math.round(v || 0)); }
 function panelGarantias(){
-  var G = D.garantias; if (!G) return "";
+  var G = D.garantias;
+  if (!G) return (D.publicacion && D.publicacion.rol === "admin") ? '<div class="panel"><h3>Garantías</h3><div class="help">Este informe todavía no trae garantías. Se leen de la hoja «Garantías» de la planilla de Pasivos (carpeta Pasivos de Drive): tiene que tener al menos una fila con custodio, instrumento y valor de mercado en dólares. Si la planilla se cambió después de la última actualización, tocá «Actualizar ahora». Los accionistas ven este bloque cuando haya datos y el informe esté publicado.</div></div>' : "";
   var C = G.cobertura, disp = G.parcial_usd + G.libre_usd, hoy = D.meta.hoy;
   var dv = G.proximo_vto ? Math.max(0, Math.round((new Date(G.proximo_vto + "T00:00:00") - new Date(hoy + "T00:00:00")) / 864e5)) : null, venc = G.proximo_vto ? dmy(G.proximo_vto) : "—";
   var h = '<div class="panel"><h3>Garantías · activos en dólares que respaldan los acuerdos bancarios</h3><div class="kpis">' +
