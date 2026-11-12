@@ -803,6 +803,7 @@ function gesBase(f){ return {fecha: f.fecha || "", estado: f.estado || "", nota:
 function gesValor(f){ return ges.ed[f.clave] || gesBase(f); }
 function gesCambios(G){ return G.facturas.filter(function(f){ var e = ges.ed[f.clave], b = gesBase(f); return e && (e.fecha !== b.fecha || e.estado !== b.estado || e.nota !== b.nota); }); }
 function gesEnFlujo(f){
+  if (f.efecto === "tango") return (f.semana ? 'Semana ' + f.semana + ' · ' : '') + '<span class="etq ok">Cobrada el ' + dm(f.fecha_tango) + ' según Tango</span>';
   if (f.efecto === "cobrada" && !f.semana) return '<span class="etq ok">Ya cobrada</span>';
   if (f.efecto === "fuera") return '<span class="etq gris">Fuera del flujo</span>';
   if (!f.semana) return '<span class="etq gris">Después de la semana 13</span>';
@@ -816,15 +817,16 @@ function gesFila(f){
   var v = gesValor(f), b = gesBase(f), cambio = v.fecha !== b.fecha || v.estado !== b.estado || v.nota !== b.nota, G = D.gestion;
   return '<tr data-fac="' + esc(f.clave) + '"' + (cambio ? ' class="cambio"' : '') + '><td>' + esc(f.comprobante) + '</td><td>' + f.emp + '</td><td>' + dm(f.emision) + '</td><td>' + dmy(f.venc_esperado) +
     (f.dias_vencida ? ' <span class="neg">(' + f.dias_vencida + ' d)</span>' : '') + '</td><td class="num">' + PESOS(f.importe) + '</td><td>' + gesEnFlujo(f) + '</td>' +
+    (f.efecto === "tango" ? '<td colspan="3" class="help" style="margin:0">Tango ya la da por cobrada: sale sola de la cartera cuando se suba una más nueva.</td></tr>' :
     '<td><input type="date" data-g="fecha" aria-label="Fecha comprometida de ' + esc(f.comprobante) + '" value="' + esc(v.fecha) + '"></td>' +
     '<td><select data-g="estado" aria-label="Estado de ' + esc(f.comprobante) + '"><option value="">Sin estado</option>' + G.estados.map(function(e){ return '<option value="' + e[0] + '"' + (v.estado === e[0] ? " selected" : "") + '>' + esc(e[1]) + '</option>'; }).join("") + '</select></td>' +
-    '<td><input type="text" data-g="nota" maxlength="' + G.max_nota + '" aria-label="Nota de ' + esc(f.comprobante) + '" placeholder="Nota" value="' + esc(v.nota) + '"></td></tr>';
+    '<td><input type="text" data-g="nota" maxlength="' + G.max_nota + '" aria-label="Nota de ' + esc(f.comprobante) + '" placeholder="Nota" value="' + esc(v.nota) + '"></td></tr>');
 }
 function gesPasa(f){
   var v = gesValor(f), q = ges.q.trim().toLowerCase();
   if (q && (f.cliente + " " + f.comprobante).toLowerCase().indexOf(q) < 0) return false;
   if (ges.filtro === "vencidas") return f.dias_vencida > 0;
-  if (ges.filtro === "sin_fecha") return !v.fecha && v.estado !== "disputa";
+  if (ges.filtro === "sin_fecha") return !v.fecha && v.estado !== "disputa" && f.efecto !== "tango";
   if (ges.filtro === "promesas") return f.efecto === "promesa_vencida";
   if (ges.filtro === "cambios") return !!gesCambios({facturas: [f]}).length;
   return true;
@@ -849,6 +851,22 @@ function gesSemanal(){
   var G = D.gestion, C = G.cobranza[ges.ent], S = G.semanas, fila = function(n, v, cls){ return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + n + '</td>' + v.map(function(x){ return '<td class="num">' + mm(x) + '</td>'; }).join("") + '<td class="num"><b>' + mm(SUMA(v)) + '</b></td></tr>'; };
   return '<div class="scrollx"><table class="fl"><thead><tr><th style="text-align:left">En millones de $</th>' + S.map(function(x, i){ return '<th>S' + (i + 1) + '<small>' + dm(x.desde) + '</small></th>'; }).join("") + '<th>13 sem.</th></tr></thead><tbody>' +
     fila("Facturas de la cartera", C.cartera) + fila("Echeqs de clientes en cartera", C.echeqs) + fila("Ventas nuevas (pronóstico)", C.nuevas) + fila("Cobranza total", C.total, "tot") + '</tbody></table></div>';
+}
+function gesTango(){
+  var G = D.gestion, T = G.totales, P = G.plazos || {}, R = P.reales || {}, F = P.flujo || {}, emps = Object.keys(R).sort(), arch = (G.archivos || {}).tango || [];
+  if (!emps.length && !arch.length) return '';
+  var h = '<div class="panel"><h3>Lo que sale de los reportes de Tango</h3>';
+  if (T.cobradas_tango) h += '<p style="margin:0 0 10px"><b>' + T.cobradas_tango + (T.cobradas_tango === 1 ? ' factura' : ' facturas') + ' por ' + MM(T.importe_cobradas_tango) + '</b> ' + (T.cobradas_tango === 1 ? 'sigue abierta en la cartera pero Tango ya la da por cobrada' : 'siguen abiertas en la cartera pero Tango ya las da por cobradas') +
+    (T.cobradas_tango === 1 ? '. Se marcó sola y el flujo no la vuelve a contar.' : '. Se marcaron solas y el flujo no las vuelve a contar.') + '</p>';
+  var filas = [];
+  emps.forEach(function(e){ [["aesa", "A-Evangelista"], ["resto", "Resto de los clientes"]].forEach(function(c){ var r = (R[e] || {})[c[0]]; if (!r) return;
+    var d = F[c[0]] == null ? null : r.dias - F[c[0]];
+    filas.push('<tr><td style="text-align:left">' + NOMBRE[e] + ' · ' + c[1] + '</td><td class="num"><b>' + Math.round(r.dias) + ' días</b></td><td class="num">' + (F[c[0]] == null ? "—" : F[c[0]] + " días") + '</td><td class="num">' + r.n + '</td><td class="num">' + MM(r.importe) + '</td><td style="text-align:left">' +
+      (d == null ? "" : d > 7 ? '<span class="etq warn">Se cobra ' + Math.round(d) + ' días más tarde</span>' : d < -7 ? '<span class="etq ok">Se cobra antes</span>' : '<span class="etq ok">En línea</span>') + '</td></tr>'); }); });
+  if (filas.length) h += '<div class="scrollx"><table class="ges"><thead><tr><th>Plazo real de cobro</th><th class="n">Real<small>emisión a cobro</small></th><th class="n">El flujo usa</th><th class="n">Facturas</th><th class="n">Cobrado</th><th></th></tr></thead><tbody>' + filas.join("") + '</tbody></table></div>' +
+    '<div class="help">Días entre la emisión y el cobro de lo cobrado en los últimos 6 meses, ponderado por importe. El flujo usa su plazo para las ventas nuevas del pronóstico; todavía no se cambió por el real.</div>';
+  if (arch.length) h += '<div class="help">' + arch.map(function(a){ return esc(a.archivo) + ' · ' + esc(a.detalle); }).join(' &nbsp;|&nbsp; ') + '</div>';
+  return h + '</div>';
 }
 function gesMensaje(j){
   var f = j.flujo || {}, g = j.guardado, t = [], cls = "";
@@ -877,7 +895,7 @@ function vistaGestion(){
   var h = '<div class="ges-cab"><div><h2>Gestión de cobranzas</h2><div class="help" style="margin:0">' +
     (A.cartera ? 'Cartera: ' + esc(A.cartera.archivo) + ' · ' + esc(A.cartera.detalle) + '. ' : 'Sin archivo de cartera. ') + 'Saldos bancarios al ' + dmy(D.meta.fecha_saldos) + '.' +
     (act && act.ts ? ' Última actualización de cobranzas: ' + esc(fechaHora(act.ts)) + (act.por ? ' por ' + esc(act.por) : '') + '.' : '') + '</div></div>' +
-    '<div class="acc"><input type="file" id="ges_archivo" accept=".xlsx,.xlsm" class="hidden"><button class="btn ghost" id="ges_subir"' + (ges.ocupado ? " disabled" : "") + '>Subir cartera de Tango o pronóstico</button>' +
+    '<div class="acc"><input type="file" id="ges_archivo" accept=".xlsx,.xlsm" class="hidden"><button class="btn ghost" id="ges_subir"' + (ges.ocupado ? " disabled" : "") + '>Subir archivo de Tango o pronóstico</button>' +
     '<button class="btn ghost" id="ges_actualizar"' + (ges.ocupado ? " disabled" : "") + ' title="Vuelve a leer la cartera y el pronóstico de ventas de Drive y recalcula el flujo">' + (ges.ocupado ? "Actualizando…" : "Actualizar desde Drive") + '</button></div></div>';
   if (G.en_curso) h += '<div class="banner ges-msg">Se está corriendo la actualización general del informe. Lo que guardes entra al flujo cuando termine, en unos minutos.</div>';
   if (ges.msg) h += '<div class="banner ges-msg' + ges.msg.cls + '" role="status">' + ges.msg.html + '</div>';
@@ -886,6 +904,7 @@ function vistaGestion(){
     kpi("Con fecha comprometida", T.con_fecha + (T.con_fecha === 1 ? " factura" : " facturas"), MM(T.importe_con_fecha), T.con_fecha ? "ok" : "") +
     kpi("Promesas vencidas", T.promesas_vencidas + (T.promesas_vencidas === 1 ? " factura" : " facturas"), T.promesas_vencidas ? MM(T.importe_promesas) + " · hay que poner fecha nueva" : "Ninguna", T.promesas_vencidas ? "bad" : "ok") +
     kpi("Fuera del flujo", T.fuera + (T.fuera === 1 ? " factura" : " facturas"), T.fuera ? MM(T.importe_fuera) + " en disputa o demoradas" : "Ninguna en disputa", T.fuera ? "warn" : "") + '</div>';
+  h += gesTango();
   h += '<div class="panel"><div class="barra" style="margin-bottom:10px"><h3 style="margin:0">Cobranza de las próximas 13 semanas</h3><div class="seg" role="group" aria-label="Empresa">' + ["GRUPO","HC","PM"].map(function(e){ return '<button data-gent="' + e + '" aria-pressed="' + (e === ges.ent) + '">' + NOMBRE[e] + '</button>'; }).join("") + '</div></div>' +
     gesSemanal() + '<div class="help">Así queda la cobranza del flujo con lo que está cargado. Las ventas nuevas salen del pronóstico de ventas; los echeqs, del archivo de Tesorería.</div></div>';
   var chips = [["todas", "Todas"], ["vencidas", "Vencidas"], ["sin_fecha", "Sin fecha comprometida"], ["promesas", "Promesas vencidas"], ["cambios", "Con cambios"]];
@@ -929,7 +948,7 @@ function gesEditar(t){
   var G = D.gestion, tr = t.closest("tr[data-fac]");
   if (t.hasAttribute("data-cli")) {                           // misma fecha para todas las facturas visibles del cliente
     var cli = t.getAttribute("data-cli"), val = t.value;
-    G.facturas.filter(function(f){ return f.cliente === cli && gesPasa(f); }).forEach(function(f){ var v = gesValor(f); ges.ed[f.clave] = {fecha: val, estado: v.estado === "cobrada" ? "" : v.estado, nota: v.nota}; });
+    G.facturas.filter(function(f){ return f.cliente === cli && gesPasa(f) && f.efecto !== "tango"; }).forEach(function(f){ var v = gesValor(f); ges.ed[f.clave] = {fecha: val, estado: v.estado === "cobrada" ? "" : v.estado, nota: v.nota}; });
     $("ges_tabla").innerHTML = gesTabla(); gesBarra(); return;
   }
   if (!tr) return;
