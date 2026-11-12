@@ -1066,7 +1066,7 @@ function panelGarantias(){
     'El informe publicado todavía no incluye las garantías. Aparecen apenas se publique la próxima actualización.') + '</div></div>';
   var C = G.cobertura, disp = G.parcial_usd + G.libre_usd, hoy = D.meta.hoy;
   var dv = G.proximo_vto ? Math.max(0, Math.round((new Date(G.proximo_vto + "T00:00:00") - new Date(hoy + "T00:00:00")) / 864e5)) : null, venc = G.proximo_vto ? dmy(G.proximo_vto) : "—";
-  var h = '<div class="panel"><h3>Garantías · activos en dólares que respaldan los acuerdos bancarios</h3><div class="kpis">' +
+  var h = '<div class="panel"><h3>Garantías · activos en dólares que respaldan operaciones financieras</h3><div class="kpis">' +
     kpi("Garantías totales", usd(G.total_usd), G.tipo_cambio ? "≈ " + MM(G.total_pesos) + " a $" + NF0.format(G.tipo_cambio) + " por dólar CCL" : "sin dólar CCL cargado", "") +
     kpi("Usadas por completo", usd(G.usada_usd), pct(G.usada_usd / (G.total_usd || 1)) + " del total", "") +
     kpi("Con disponibilidad", usd(disp), disp ? "a confirmar cuánto está libre en cada custodio" : "toda la garantía está tomada", disp ? "" : "warn") +
