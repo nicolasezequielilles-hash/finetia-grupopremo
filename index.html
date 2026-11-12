@@ -1079,13 +1079,9 @@ function panelGarantias(){
   var DS = G.descubierto;
   if (DS) {
     var fe = "";
-    DS.empresas.forEach(function(x){ fe += '<tr><td>' + (x.emp === "HC" ? "Hormigones Cardales" : "Premoldeados") + '</td><td class="num">' + MM(x.acuerdo) + '</td><td class="num"><b>' + MM(x.utilizado) + '</b></td><td class="num' + (x.margen < 0 ? " neg" : "") + '">' + (x.margen === null || x.margen === undefined ? "—" : MM(x.margen)) + '</td><td>' + (x.respaldo === "EECC" ? "Balance (EECC)" : "Estas garantías") + '</td></tr>'; });
-    h += '<h4 style="margin:14px 0 6px">Descubierto utilizado en CMF' + (DS.fecha ? ' · al ' + dmy(DS.fecha) : '') + '</h4><div class="scrollx"><table class="tl"><thead><tr><th>Empresa</th><th class="n">Acuerdo</th><th class="n">Utilizado</th><th class="n">Margen</th><th>Respaldo</th></tr></thead><tbody>' + fe + '</tbody></table></div>';
-    if (DS.serie && DS.serie.length) {
-      var fs2 = "", ult = DS.serie.slice(-10).reverse();
-      ult.forEach(function(p){ fs2 += '<tr><td>' + dmy(p.fecha) + '</td><td class="num">' + (p.HC === null || p.HC === undefined ? "—" : MM(p.HC)) + '</td><td class="num">' + (p.PM === null || p.PM === undefined ? "—" : MM(p.PM)) + '</td><td class="num">' + (p.veces ? NF2(p.veces) + " veces" : "—") + '</td></tr>'; });
-      h += '<h4 style="margin:14px 0 6px">Descubierto utilizado día por día (extractos de CMF)</h4><div class="scrollx"><table class="tl"><thead><tr><th>Día</th><th class="n">Cardales</th><th class="n">Premoldeados</th><th class="n">Cobertura de Premoldeados</th></tr></thead><tbody>' + fs2 + '</tbody></table></div><div class="help">Saldo de cierre de cada día con movimiento, tomado de los extractos. La cobertura divide las garantías usadas, valuadas hoy al dólar CCL, por lo utilizado ese día.</div>';
-    }
+    DS.empresas.forEach(function(x){ fe += '<tr><td>' + (x.emp === "HC" ? "Hormigones Cardales" : "Premoldeados") + '</td><td class="num">' + MM(x.acuerdo) + '</td><td class="num"><b>' + MM(x.utilizado) + '</b></td><td class="num' + (x.margen < 0 ? " neg" : "") + '">' + (x.margen === null || x.margen === undefined ? "—" : MM(x.margen)) + '</td><td>' + (x.respaldo === "EECC" ? "Balance (EECC)" : "Estas garantías") + '</td><td>' + (x.fuente === "extracto" ? "Extracto de CMF" : "Excel de Tesorería") + (x.fecha ? " al " + dmy(x.fecha) : "") + '</td></tr>'; });
+    fe += '<tr class="tot"><td>Total del Grupo</td><td class="num">' + MM(DS.acuerdo_total) + '</td><td class="num"><b>' + MM(DS.utilizado_total) + '</b></td><td class="num">' + MM(DS.acuerdo_total - DS.utilizado_total) + '</td><td></td><td></td></tr>';
+    h += '<h4 style="margin:14px 0 6px">Descubierto utilizado en CMF</h4><div class="scrollx"><table class="tl"><thead><tr><th>Empresa</th><th class="n">Acuerdo</th><th class="n">Utilizado</th><th class="n">Margen</th><th>Respaldo</th><th>Fuente</th></tr></thead><tbody>' + fe + '</tbody></table></div><div class="help">Lo utilizado es el saldo negativo del último movimiento de los extractos de CMF que sube el equipo de Tesorería; solo si el Excel de saldos trae una fecha más nueva se usa el del Excel. Es el mismo descubierto que figura en la deuda del Grupo.</div>';
   }
   var filas = "";
   G.custodios.forEach(function(c){
