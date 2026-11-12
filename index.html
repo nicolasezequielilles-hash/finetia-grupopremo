@@ -1063,14 +1063,25 @@ function panelGarantias(){
   var C = G.cobertura, disp = G.parcial_usd + G.libre_usd, hoy = D.meta.hoy;
   var dv = G.proximo_vto ? Math.max(0, Math.round((new Date(G.proximo_vto + "T00:00:00") - new Date(hoy + "T00:00:00")) / 864e5)) : null, venc = G.proximo_vto ? dmy(G.proximo_vto) : "—";
   var h = '<div class="panel"><h3>Garantías · activos en dólares que respaldan los acuerdos bancarios</h3><div class="kpis">' +
-    kpi("Garantías totales", usd(G.total_usd), G.tipo_cambio ? "≈ " + MM(G.total_pesos) + " a $" + NF0.format(G.tipo_cambio) + " por dólar" : "sin tipo de cambio cargado", "") +
+    kpi("Garantías totales", usd(G.total_usd), G.tipo_cambio ? "≈ " + MM(G.total_pesos) + " a $" + NF0.format(G.tipo_cambio) + " por dólar CCL" : "sin dólar CCL cargado", "") +
     kpi("Usadas por completo", usd(G.usada_usd), pct(G.usada_usd / (G.total_usd || 1)) + " del total", "") +
     kpi("Con disponibilidad", usd(disp), disp ? "a confirmar cuánto está libre en cada custodio" : "toda la garantía está tomada", disp ? "" : "warn") +
     kpi("Próximo vencimiento", venc, (dv !== null ? "en " + dv + " días · " : "") + (G.titulos_usd ? "títulos " + usd(G.titulos_usd) + " · efectivo " + usd(G.efectivo_usd) : ""), dv !== null && dv <= 60 ? "warn" : "") + '</div>';
   if (C) {
     h += '<div class="help" style="margin:0 0 10px"><b>Cobertura.</b> El acuerdo de Hormigones Cardales (' + MM(C.acuerdo_eecc) + ') se respalda con el balance (EECC); el resto, ' + MM(C.acuerdo_respaldado) + ', con estas garantías. ' +
-      (C.veces_tomada ? 'Las garantías usadas valen ' + MM(C.garantia_tomada_pesos) + ' (<b>' + NF2(C.veces_tomada) + ' veces</b> el acuerdo)' + (C.veces_total ? ' y con las que tienen disponibilidad, ' + NF2(C.veces_total) + ' veces' : '') + '. ' : '') +
-      'Las usadas cubren el acuerdo mientras el dólar no baje de <b>$' + NF0.format(Math.round(C.tc_equilibrio_tomada || 0)) + '</b>' + (G.tipo_cambio ? ' (hoy $' + NF0.format(G.tipo_cambio) + ')' : '') + '.</div>';
+      (C.veces_tomada ? 'Valuadas al dólar CCL, las garantías usadas valen ' + MM(C.garantia_tomada_pesos) + ': <b>' + NF2(C.veces_tomada) + ' veces</b> el acuerdo' + (C.veces_utilizado ? ' y <b>' + NF2(C.veces_utilizado) + ' veces</b> lo que hoy se usa de ese descubierto (' + MM(C.utilizado_respaldado) + ')' : '') + (C.veces_total ? '; sumando lo que tiene disponibilidad, ' + NF2(C.veces_total) + ' veces el acuerdo' : '') + '. ' : '') +
+      'Las usadas cubren el acuerdo mientras el dólar CCL no baje de <b>$' + NF0.format(Math.round(C.tc_equilibrio_tomada || 0)) + '</b>' + (C.tc_equilibrio_utilizado ? ' y lo utilizado, de <b>$' + NF0.format(Math.round(C.tc_equilibrio_utilizado)) + '</b>' : '') + (G.tipo_cambio ? ' (hoy $' + NF0.format(G.tipo_cambio) + ').' : '.') + '</div>';
+  }
+  var DS = G.descubierto;
+  if (DS) {
+    var fe = "";
+    DS.empresas.forEach(function(x){ fe += '<tr><td>' + (x.emp === "HC" ? "Hormigones Cardales" : "Premoldeados") + '</td><td class="num">' + MM(x.acuerdo) + '</td><td class="num"><b>' + MM(x.utilizado) + '</b></td><td class="num' + (x.margen < 0 ? " neg" : "") + '">' + (x.margen === null || x.margen === undefined ? "—" : MM(x.margen)) + '</td><td>' + (x.respaldo === "EECC" ? "Balance (EECC)" : "Estas garantías") + '</td></tr>'; });
+    h += '<h4 style="margin:14px 0 6px">Descubierto utilizado en CMF' + (DS.fecha ? ' · al ' + dmy(DS.fecha) : '') + '</h4><div class="scrollx"><table class="tl"><thead><tr><th>Empresa</th><th class="n">Acuerdo</th><th class="n">Utilizado</th><th class="n">Margen</th><th>Respaldo</th></tr></thead><tbody>' + fe + '</tbody></table></div>';
+    if (DS.serie && DS.serie.length) {
+      var fs2 = "", ult = DS.serie.slice(-10).reverse();
+      ult.forEach(function(p){ fs2 += '<tr><td>' + dmy(p.fecha) + '</td><td class="num">' + (p.HC === null || p.HC === undefined ? "—" : MM(p.HC)) + '</td><td class="num">' + (p.PM === null || p.PM === undefined ? "—" : MM(p.PM)) + '</td><td class="num">' + (p.veces ? NF2(p.veces) + " veces" : "—") + '</td></tr>'; });
+      h += '<h4 style="margin:14px 0 6px">Descubierto utilizado día por día (extractos de CMF)</h4><div class="scrollx"><table class="tl"><thead><tr><th>Día</th><th class="n">Cardales</th><th class="n">Premoldeados</th><th class="n">Cobertura de Premoldeados</th></tr></thead><tbody>' + fs2 + '</tbody></table></div><div class="help">Saldo de cierre de cada día con movimiento, tomado de los extractos. La cobertura divide las garantías usadas, valuadas hoy al dólar CCL, por lo utilizado ese día.</div>';
+    }
   }
   var filas = "";
   G.custodios.forEach(function(c){
@@ -1078,12 +1089,12 @@ function panelGarantias(){
     filas += '<tr class="tot"><td colspan="4"><b>' + esc(c.custodio) + '</b>' + (c.respalda.length ? ' <span class="help" style="margin:0">· respalda ' + esc(c.respalda.join(", ")) + '</span>' : '') + '</td><td class="num"><b>' + usd(c.valor_usd) + '</b></td><td></td><td><span class="pill ' + e[1] + '">' + e[0] + '</span></td></tr>';
     c.items.forEach(function(g){
       var r = g.resultado_usd, ge = EST_GAR[g.estado];
-      filas += '<tr><td style="padding-left:22px">' + esc(g.instrumento) + (g.obs ? '<div class="help" style="margin:0;max-width:300px;white-space:normal">' + esc(g.obs) + '</div>' : '') + '</td><td class="num">' + (g.vto ? dmy(g.vto) : "—") + '</td><td class="num">' + (g.dias === null || g.dias === undefined ? "—" : (g.dias >= 0 ? g.dias : "vencido")) + '</td><td class="num">' + (g.vn ? NF0.format(g.vn) : "—") + '</td><td class="num">' + usd(g.valor_usd) + '</td><td class="num' + (r < 0 ? " neg" : "") + '">' + (r === null || r === undefined ? "—" : (r >= 0 ? "+" : "−") + NF0.format(Math.abs(Math.round(r)))) + '</td><td><span class="pill ' + ge[1] + '">' + ge[0] + '</span></td></tr>';
+      filas += '<tr><td style="padding-left:22px">' + esc(g.instrumento) + (g.obs ? '<div class="help" style="margin:0;max-width:300px;white-space:normal">' + esc(g.obs) + '</div>' : '') + '</td><td class="num">' + (g.vto ? dmy(g.vto) : "—") + '</td><td class="num">' + (g.dias === null || g.dias === undefined ? "—" : (g.dias >= 0 ? g.dias : "vencido")) + '</td><td class="num">' + (g.vn ? NF0.format(g.vn) : "—") + '</td><td class="num">' + usd(g.valor_usd) + (g.canje ? '<div class="help" style="margin:0">bruto ' + usd(g.valor_bruto_usd) + ' − canje ' + NF0.format(Math.round(g.canje * 100)) + '%</div>' : '') + '</td><td class="num' + (r < 0 ? " neg" : "") + '">' + (r === null || r === undefined ? "—" : (r >= 0 ? "+" : "−") + NF0.format(Math.abs(Math.round(r)))) + '</td><td><span class="pill ' + ge[1] + '">' + ge[0] + '</span></td></tr>';
     });
   });
   h += '<div class="scrollx"><table class="tl"><thead><tr><th>Custodio / instrumento</th><th class="n">Vence</th><th class="n">Días</th><th class="n">Valor nominal</th><th class="n">Valor de mercado</th><th class="n">Resultado US$</th><th>Estado</th></tr></thead><tbody>' + filas +
     '<tr class="tot"><td colspan="4">Total</td><td class="num"><b>' + usd(G.total_usd) + '</b></td><td></td><td></td></tr></tbody></table></div>' +
-    '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías). "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo.</div></div>';
+    '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías), valuados como dólar CCL: los dólares MEP se muestran netos del canje a CCL. "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo.</div></div>';
   return h;
 }
 function vistaDeuda(){
