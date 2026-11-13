@@ -1068,12 +1068,12 @@ function panelGarantias(){
   var dv = G.proximo_vto ? Math.max(0, Math.round((new Date(G.proximo_vto + "T00:00:00") - new Date(hoy + "T00:00:00")) / 864e5)) : null, venc = G.proximo_vto ? dmy(G.proximo_vto) : "—";
   var h = '<div class="panel"><h3>Garantías · activos en dólares que respaldan operaciones financieras</h3><div class="kpis">' +
     kpi("Garantías totales", usd(G.total_usd), G.tipo_cambio ? "≈ " + MM(G.total_pesos) + " a $" + NF0.format(G.tipo_cambio) + " por dólar CCL" : "sin dólar CCL cargado", "") +
-    kpi("Usadas por completo", usd(G.usada_usd), pct(G.usada_usd / (G.total_usd || 1)) + " del total", "") +
-    kpi("Con disponibilidad", usd(disp), disp ? "a confirmar cuánto está libre en cada custodio" : "toda la garantía está tomada", disp ? "" : "warn") +
+    kpi("Usadas por completo", usd(G.usada_usd), pct(G.usada_usd / (G.total_usd || 1)) + " del total" + (G.usada_caucion_usd ? " · " + usd(G.usada_caucion_usd) + " respaldan cauciones" : ""), "") +
+    kpi("Con disponibilidad", usd(disp), disp ? "sin tomar, según el último extracto de cada custodio" : "toda la garantía está tomada", disp ? "" : "warn") +
     kpi("Próximo vencimiento", venc, (dv !== null ? "en " + dv + " días · " : "") + (G.titulos_usd ? "títulos " + usd(G.titulos_usd) + " · efectivo " + usd(G.efectivo_usd) : ""), dv !== null && dv <= 60 ? "warn" : "") + '</div>';
   if (C) {
     h += '<div class="help" style="margin:0 0 10px"><b>Cobertura.</b> El acuerdo de Hormigones Cardales (' + MM(C.acuerdo_eecc) + ') se respalda con el balance (EECC); el resto, ' + MM(C.acuerdo_respaldado) + ', con estas garantías. ' +
-      (C.veces_tomada ? 'Valuadas al dólar CCL, las garantías usadas valen ' + MM(C.garantia_tomada_pesos) + ': <b>' + NF2(C.veces_tomada) + ' veces</b> el acuerdo' + (C.veces_utilizado ? ' y <b>' + NF2(C.veces_utilizado) + ' veces</b> lo que hoy se usa de ese descubierto (' + MM(C.utilizado_respaldado) + ')' : '') + (C.veces_total ? '; sumando lo que tiene disponibilidad, ' + NF2(C.veces_total) + ' veces el acuerdo' : '') + '. ' : '') +
+      (C.veces_tomada ? 'Valuadas al dólar CCL, las garantías usadas para acuerdos bancarios valen ' + MM(C.garantia_tomada_pesos) + (G.usada_caucion_usd ? ' (sin contar ' + usd(G.usada_caucion_usd) + ' que respaldan cauciones)' : '') + ': <b>' + NF2(C.veces_tomada) + ' veces</b> el acuerdo' + (C.veces_utilizado ? ' y <b>' + NF2(C.veces_utilizado) + ' veces</b> lo que hoy se usa de ese descubierto (' + MM(C.utilizado_respaldado) + ')' : '') + (C.veces_total ? '; sumando lo que tiene disponibilidad, ' + NF2(C.veces_total) + ' veces el acuerdo' : '') + '. ' : '') +
       'Las usadas cubren el acuerdo mientras el dólar CCL no baje de <b>$' + NF0.format(Math.round(C.tc_equilibrio_tomada || 0)) + '</b>' + (C.tc_equilibrio_utilizado ? ' y lo utilizado, de <b>$' + NF0.format(Math.round(C.tc_equilibrio_utilizado)) + '</b>' : '') + (G.tipo_cambio ? ' (hoy $' + NF0.format(G.tipo_cambio) + ').' : '.') + '</div>';
   }
   var DS = G.descubierto;
