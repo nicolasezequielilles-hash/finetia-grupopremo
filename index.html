@@ -495,10 +495,10 @@ function barraAdmin(pub, sello){
 }
 function lineaArchivado(){
   var a = D.meta && D.meta.archivado; if (!a) return "";
-  if (!a.activo) return '<div class="help">Archivado automático en Drive: apagado. Los archivos viejos se quedan en la carpeta.</div>';
+  if (!a.activo) return '<div class="help">Archivado automático en Drive: apagado. Los archivos se quedan en la carpeta después de leerse.</div>';
   var u = a.ultimo; if (!u) return '<div class="help">Archivado automático en Drive: encendido. Todavía no hubo una corrida que archive.</div>';
-  var t = u.movidos.length ? 'Se movieron ' + u.movidos.length + (u.movidos.length === 1 ? ' archivo reemplazado' : ' archivos reemplazados') + ' a ' + esc(u.carpeta) + ': ' + u.movidos.slice(0, 6).map(function(m){ return esc(m.nombre); }).join(", ") + (u.movidos.length > 6 ? "…" : "") + "."
-    : 'Sin archivos reemplazados para mover (último control ' + esc(String(u.fecha || "").split("-").reverse().join("/")) + ').';
+  var t = u.movidos.length ? 'Se movieron ' + u.movidos.length + (u.movidos.length === 1 ? ' archivo ya leído' : ' archivos ya leídos') + ' a ' + esc(u.carpeta) + ' (FINETIA guarda su copia de lo último de cada tipo): ' + u.movidos.slice(0, 6).map(function(m){ return esc(m.nombre); }).join(", ") + (u.movidos.length > 6 ? "…" : "") + "."
+    : 'No había archivos leídos para mover (último control ' + esc(String(u.fecha || "").split("-").reverse().join("/")) + ').';
   return '<div class="help">Archivado automático en Drive: ' + t + (u.errores && u.errores.length ? ' <b class="neg">' + esc(u.errores[0]) + '</b>' : '') + '</div>';
 }
 function panelEntradas(es){
