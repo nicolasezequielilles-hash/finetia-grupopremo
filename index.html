@@ -380,6 +380,7 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
     <button role="tab" data-tab="deuda" aria-selected="false">Deuda</button>
     <button role="tab" data-tab="garantias" aria-selected="false">Garantías</button>
     <button role="tab" data-tab="gestion" id="tab_gestion" aria-selected="false" hidden>Gestión de cobranzas</button>
+    <button role="tab" data-tab="obras" id="tab_obras" aria-selected="false" hidden>Obras</button>
     <button role="tab" data-tab="admin" id="tab_admin" aria-selected="false" hidden>Administración</button>
   </div></nav>
   <main><div class="wrap">
@@ -443,8 +444,9 @@ function cargar(){
   var leer = function(ruta){ return fetch(API + ruta, {headers:{Authorization:"Bearer " + t}}).then(function(r){ return r.json().then(function(j){
       if (r.status === 401) { store.del("gp_token"); throw {login:true, message:"La sesión venció. Ingresá de nuevo."}; }
       if (r.status === 403 && ruta.indexOf("/portal/") > 0) return leer("/api/v1/cobranzas/panel");      // usuario del equipo de Cobranzas: solo su panel
+      if (r.status === 403 && ruta.indexOf("/cobranzas/") > 0) return leer("/api/v1/obras/panel");        // jefe de Producción: solo el seguimiento de obras
       if (!r.ok) throw new Error(j.detail || "Error del servidor."); return j; }); }); };
-  leer(store.get("gp_rol") === "cobranzas" ? "/api/v1/cobranzas/panel" : "/api/v1/portal/resumen")
+  leer(store.get("gp_rol") === "cobranzas" ? "/api/v1/cobranzas/panel" : store.get("gp_rol") === "produccion" ? "/api/v1/obras/panel" : "/api/v1/portal/resumen")
     .then(function(j){ D = j; cumpl = 1; ges.ed = {}; pintar(); })
     .catch(function(e){
       if (e && e.login) return mostrarLogin(e.message);
@@ -470,11 +472,12 @@ function encabezado(){
   if (admin) av.push(barraAdmin(pub, sello));
   if (!admin) (cal.avisos_publicos || []).forEach(function(a){ av.push('<div class="banner">' + esc(a) + '</div>'); });
   $("tab_admin").hidden = !admin;
-  var cobr = pub.rol === "cobranzas";
+  var cobr = pub.rol === "cobranzas", prod = pub.rol === "produccion";
   $("tab_gestion").hidden = !(admin || cobr); $("tab_gestion").style.order = cobr ? "-1" : "";
-  document.querySelectorAll("nav.tabs button").forEach(function(b){ var k = b.getAttribute("data-tab"); if (k !== "gestion" && k !== "admin") b.hidden = cobr && k !== "ventas"; });
-  $("subtitulo").textContent = cobr ? "Panel del equipo de Cobranzas" : "Informe financiero · uso exclusivo de accionistas";
-  if (cobr) { document.title = D.titulo + " · Cobranzas"; $("stamp").innerHTML = 'saldos al ' + dmy(m.fecha_saldos); av = []; }
+  $("tab_obras").hidden = !(admin || cobr || prod); $("tab_obras").style.order = prod ? "-1" : "";
+  document.querySelectorAll("nav.tabs button").forEach(function(b){ var k = b.getAttribute("data-tab"); if (k !== "gestion" && k !== "admin" && k !== "obras") b.hidden = prod || (cobr && k !== "ventas"); });
+  $("subtitulo").textContent = cobr ? "Panel del equipo de Cobranzas" : prod ? "Seguimiento de obras · Producción" : "Informe financiero · uso exclusivo de accionistas";
+  if (cobr || prod) { document.title = D.titulo + (cobr ? " · Cobranzas" : " · Obras"); $("stamp").innerHTML = 'saldos al ' + dmy(m.fecha_saldos); av = []; }
   $("avisos").innerHTML = av.join("");
   var ir = $("ir_admin"); if (ir) ir.onclick = function(){ tab = "admin"; marcarTab(); store.set("gp_tab", tab); pintar(); window.scrollTo(0, 0); };
   var bp = $("btn_publicar"); if (bp) bp.onclick = publicar;
@@ -1400,14 +1403,152 @@ $("ia_cerrar").onclick = function(){ $("ia_panel").classList.remove("abierto"); 
 $("ia_form").onsubmit = function(ev){ ev.preventDefault(); chatEnviar($("ia_q").value); };
 $("ia_q").onkeydown = function(ev){ if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); chatEnviar($("ia_q").value); } };
 document.addEventListener("keydown", function(ev){ if (ev.key === "Escape" && $("ia_panel").classList.contains("abierto")) $("ia_cerrar").onclick(); });
+/* ---------- Obras y órdenes de compra (jefa de ventas / cobranzas, jefe de producción y administrador) ---------- */
+var obr = {abierta: null, todas: false, msg: null, ocupado: false};
+var MESL = function(ym){ return ym ? ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][+ym.slice(5,7) - 1] + " " + ym.slice(0,4) : "—"; };
+var CB = function(c){ return c ? c.replace(/^([A-Z])0*(\d{1,5})(\d{8})$/, function(_, l, pv, n){ return l + "-" + ("0000" + pv).slice(-4) + "-" + n; }) : ""; };
+var NUMU = function(v, d){ return new Intl.NumberFormat("es-AR", {maximumFractionDigits: d || 0}).format(v || 0); };
+function obrCobro(f){
+  if (f.estado === "anulada") return '<span class="pill">Anulada · NC ' + esc(CB(f.nc)) + '</span>';
+  if (f.estado === "rechazada") return '<span class="pill warn">Reemitida como ' + esc(CB(f.reemplazo)) + ' · falta NC</span>';
+  var c = f.cobro || {};
+  if (c.estado === "cobrada") return '<span class="pill ok">Cobrada' + (c.fuente && c.fuente !== "ya no está en la cartera" ? ' · según ' + esc(c.fuente) : '') + (c.fecha_cobro ? ' ' + dm(c.fecha_cobro) : '') + '</span>';
+  if (c.vencida) return '<span class="pill bad">Vencida hace ' + c.dias_vencida + ' días</span>';
+  return '<span class="pill warn">A cobrar · vence ' + dmy(c.venc) + (c.sin_cartera ? ' (todavía no está en la cartera)' : '') + '</span>';
+}
+function obrBarra(o){
+  var t = (o.cobrado || 0) + (o.a_cobrar || 0); if (!t) return '';
+  var w = function(v){ return Math.max(0, Math.round(1000 * v / t) / 10) + "%"; };
+  return '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line);min-width:90px" title="Cobrado ' + MM(o.cobrado) + ' · a cobrar ' + MM(o.a_cobrar - o.vencido) + ' · vencido ' + MM(o.vencido) + '">' +
+    '<span style="width:' + w(o.cobrado) + ';background:var(--ok)"></span><span style="width:2px;background:var(--surface)"></span>' +
+    '<span style="width:' + w(o.a_cobrar - o.vencido) + ';background:var(--accent-soft)"></span><span style="width:2px;background:var(--surface)"></span>' +
+    '<span style="width:' + w(o.vencido) + ';background:var(--bad)"></span></div>';
+}
+function obrSubida(){
+  return '<span class="acc" style="display:inline-flex;gap:8px;align-items:center"><input type="file" id="obr_archivo" accept=".xlsx,.xlsm" hidden>' +
+    '<button class="btn ghost" id="obr_subir"' + (obr.ocupado ? ' disabled' : '') + ' title="Planilla «Seguimiento de obras» actualizada (hojas Obras, Facturas, Producción y Posiciones)">' + (obr.ocupado ? 'Subiendo…' : 'Subir planilla de obras') + '</button></span>';
+}
+function obrEnlazar(){
+  var b = $("obr_subir"), f = $("obr_archivo"); if (!b || !f) return;
+  b.onclick = function(){ f.click(); };
+  f.onchange = function(){
+    var a = f.files[0]; if (!a) return; obr.ocupado = true; obr.msg = null; pintar();
+    var fr = new FileReader();
+    fr.onload = function(){
+      llamar("POST", "/api/v1/obras/subir", {nombre: a.name, contenido_b64: String(fr.result).split(",")[1] || ""}).then(function(j){
+        obr.ocupado = false; D.obras = j.obras;
+        var fl = j.flujo || {};
+        obr.msg = {cls: fl.estado === "error" ? " bad" : "", html: 'Se cargó <b>' + esc(j.subido ? j.subido.nombre : a.name) + '</b>.' + (fl.mensaje ? ' ' + esc(fl.mensaje) : ' El seguimiento ya está actualizado con la cartera del último informe.')};
+        pintar();
+      }).catch(function(e){ obr.ocupado = false; obr.msg = {cls: " bad", html: esc((e && e.message) || "No se pudo subir la planilla.")}; pintar(); });
+    };
+    fr.readAsDataURL(a);
+  };
+  document.querySelectorAll("[data-obra]").forEach(function(x){ x.onclick = function(){ var k = x.getAttribute("data-obra"); obr.abierta = obr.abierta === k ? null : k; pintar(); if (obr.abierta) { var d = $("obra_det"); if (d) d.scrollIntoView({behavior: "smooth", block: "start"}); } }; });
+  var t = $("obr_todas"); if (t) t.onclick = function(){ obr.todas = !obr.todas; pintar(); };
+}
+function obrDetalle(o){
+  var h = '<div class="panel" id="obra_det"><div class="ges-cab"><div><h2>' + esc(o.obra) + '</h2><div class="help" style="margin:0">' + esc(o.cliente) + (o.cliente_final ? ' para ' + esc(o.cliente_final) : '') + ' · OC ' + esc(o.oc) + ' · ' + NOMBRE[o.empresa] +
+    ' · ' + esc(o.estado) + (o.desde || o.hasta ? ' · vigencia ' + (o.desde ? dmy(o.desde) : '…') + ' a ' + (o.hasta ? dmy(o.hasta) : '…') : '') + ' · pago a ' + o.plazo + ' días</div></div>' +
+    '<span class="acc"><button class="btn ghost" data-obra="' + esc(o.oc) + '">Cerrar</button></span></div>';
+  h += '<div class="kpis">' + kpi("Facturado con IVA", MM(o.facturado_total), "neto " + MM(o.facturado_neto) + (o.anuladas ? " · " + o.anuladas + " anuladas por NC" : ""), "") +
+    kpi("Cobrado", MM(o.cobrado), o.facturado_total ? pct(o.cobrado / o.facturado_total) + " de lo facturado" : "", "") +
+    kpi("A cobrar", MM(o.a_cobrar), o.vencido ? MM(o.vencido) + " vencido" : "nada vencido", o.vencido ? "warn" : "") +
+    (o.monto && o.consumo_cabecera !== null ? kpi("Monto de cabecera", MM(o.monto), pct(o.consumo_cabecera) + " ya facturado (neto)", o.consumo_cabecera >= 0.8 ? "warn" : "") :
+      kpi("Última factura", o.ultima_factura ? dmy(o.ultima_factura) : "—", o.produccion && o.produccion.ultima_acta ? "última acta " + dmy(o.produccion.ultima_acta) : "", "")) + '</div>';
+  if (o.alertas.length) h += '<ul class="mirar">' + o.alertas.map(function(a){ return '<li class="' + (a.nivel === "alta" ? "r" : a.nivel === "media" ? "w" : "") + '"><span class="prio ' + a.nivel + '">' + a.nivel + '</span>' + esc(a.texto) + '</li>'; }).join("") + '</ul>';
+  var A = o.anticipo;
+  if (A) {
+    h += '<h4 style="margin:16px 0 6px">Anticipo del ' + NUMU(A.pct) + '%</h4><div class="kpis">' +
+      kpi("Anticipo según la OC", (A.moneda === "USD" ? "US$ " : "$ ") + NUMU(A.monto_oc), A.factura ? "factura " + CB(A.factura) + " del " + dmy(A.fecha) : "sin factura de anticipo cargada", "") +
+      kpi("Anticipo cobrado (neto)", A.anticipo_neto !== null ? MM(A.anticipo_neto) : "—", A.tc_implicito ? "a $ " + NUMU(A.tc_implicito, 2) + " por dólar (implícito)" : "", "") +
+      kpi("Ya descontado en facturas", MM(A.aplicado_neto), A.notas + " notas de crédito" + (A.sobre_facturado ? " · " + NUMU(100 * A.sobre_facturado, 1) + "% de lo entregado" : ""), A.fuera_de_pct.length ? "warn" : "") +
+      kpi("Saldo por descontar", A.saldo_neto !== null ? MM(A.saldo_neto) : "—", A.avance_oc !== null ? "entregado ≈ " + (A.moneda === "USD" ? "US$ " : "") + NUMU(A.entregado_moneda) + " (" + pct(A.avance_oc) + " de la OC)" : "", A.saldo_neto !== null && A.saldo_neto < 0 ? "bad" : "") + '</div>' +
+      '<div class="help">El anticipo es un pasivo con el cliente hasta que se entrega: cada factura de entrega lleva una nota de crédito del ' + NUMU(A.pct) + '% del mismo día que lo descuenta, por eso la cartera ya muestra las facturas netas. El tipo de cambio implícito sale de dividir el anticipo cobrado en pesos por el ' + NUMU(A.pct) + '% del monto de la OC.</div>';
+  }
+  var PO = o.posiciones;
+  if (PO) {
+    h += '<h4 style="margin:16px 0 6px">Unidades por posición</h4><div class="scrollx"><table class="tl"><thead><tr><th>Pos.</th><th>Descripción</th><th class="n">Cantidad OC</th><th class="n">Entregadas</th><th class="n">Pendientes</th><th class="n">Precio unit.</th><th class="n">Pendiente</th><th>Entrega pactada</th></tr></thead><tbody>' +
+      PO.lineas.map(function(p){ return '<tr><td>' + esc(p.pos) + '</td><td>' + esc(p.descripcion) + '</td><td class="num">' + NUMU(p.cantidad) + '</td><td class="num">' + (p.entregado === null || p.entregado === undefined ? '<span class="help" style="margin:0">sin dato</span>' : NUMU(p.entregado)) + '</td><td class="num">' + NUMU(p.pendiente) +
+        '</td><td class="num">' + NUMU(p.precio, 2) + '</td><td class="num">' + NUMU(p.valor_pendiente, 2) + '</td><td>' + (p.entrega ? dmy(p.entrega) : '—') + (p.vencida ? ' <span class="pill bad">vencida</span>' : '') + '</td></tr>'; }).join("") +
+      '<tr class="tot"><td colspan="2">Total</td><td class="num">' + NUMU(PO.unidades) + '</td><td class="num">' + NUMU(PO.entregadas) + '</td><td class="num">' + NUMU(PO.unidades - PO.entregadas) + '</td><td></td><td class="num"><b>' + NUMU(PO.valor_pendiente, 2) + '</b></td><td></td></tr></tbody></table></div>' +
+      '<div class="help">Precios y totales en ' + esc(o.moneda) + ' sin IVA, según la OC. ' + (PO.entregas_cargadas ? '' : '<span class="warnline">Producción todavía no cargó las entregas: completar «Cantidad entregada» en la hoja Posiciones de la planilla.</span>') + '</div>';
+  }
+  var filas = "";
+  o.certificados.slice().reverse().forEach(function(c){
+    var vig = c.facturas.filter(function(f){ return f.estado === "vigente"; }), mostradas = vig.length ? vig : [c.facturas[c.facturas.length - 1]];
+    var otras = c.facturas.filter(function(f){ return f.estado !== "vigente" && mostradas.indexOf(f) < 0; });
+    mostradas.forEach(function(f, i){
+      filas += '<tr><td>' + (i ? '' : (c.cert ? 'N.º ' + esc(c.cert) : (f.es_anticipo ? 'Anticipo' : (f.tipo === "ND" ? 'Nota de débito' : 'Factura')))) + '</td><td>' + (i ? '' : MESL(c.periodo)) + '</td><td>' + esc(CB(f.comprobante)) + '</td><td class="num">' + dmy(f.fecha) + '</td><td class="num">' + MM(f.total) +
+        (f.anticipo ? '<div class="help" style="margin:0">− ' + MM(f.anticipo) + ' anticipo</div>' : '') + '</td><td>' + obrCobro(f) + '</td><td class="help" style="margin:0;white-space:normal">' +
+        (i ? '' : otras.map(function(x){ return esc(CB(x.comprobante)) + ' ' + (x.estado === "anulada" ? 'anulada' : 'rechazada'); }).join(" · ")) + '</td></tr>';
+    });
+  });
+  h += '<h4 style="margin:16px 0 6px">' + (o.certificados.some(function(c){ return c.cert; }) ? 'Certificados y facturas' : 'Facturas') + '</h4><div class="scrollx"><table class="tl"><thead><tr><th>Certificado</th><th>Mes</th><th>Factura vigente</th><th class="n">Fecha</th><th class="n">Total</th><th>Cobro</th><th>Anuladas / rechazadas</th></tr></thead><tbody>' + filas + '</tbody></table></div>';
+  var PR = o.produccion;
+  if (PR && PR.actas) {
+    var sc = PR.sin_certificar;
+    h += '<h4 style="margin:16px 0 6px">Producción liberada (actas)</h4><div class="kpis">' +
+      kpi("Actas", NUMU(PR.actas), PR.ultima_acta ? "última: N.º " + (PR.ultimo_numero || "") + " del " + dmy(PR.ultima_acta) : "", "") +
+      kpi("Piezas", NUMU(PR.piezas), NUMU(PR.m3, 1) + " m³ de hormigón", "") +
+      kpi("Armadura e insertos", NUMU(PR.kg_armadura / 1000, 1) + " t", NUMU(PR.kg_insertos / 1000, 1) + " t de insertos", "") +
+      kpi("Liberado sin certificar", sc ? NUMU(sc.m3, 1) + " m³" : "—", sc ? (sc.actas ? sc.actas + " actas después de " + MESL(sc.ultimo_periodo) : "todo lo liberado ya está en un certificado") : "obra terminada", sc && sc.actas ? "warn" : "") + '</div>';
+    h += '<div class="scrollx"><table class="tl"><thead><tr><th>Mes</th><th class="n">Actas</th><th class="n">Piezas</th><th class="n">m³</th><th class="n">kg armadura</th><th class="n">kg insertos</th></tr></thead><tbody>' +
+      PR.meses.slice().reverse().map(function(m){ return '<tr><td>' + MESL(m.mes) + '</td><td class="num">' + m.actas + '</td><td class="num">' + NUMU(m.piezas) + '</td><td class="num">' + NUMU(m.m3, 1) + '</td><td class="num">' + NUMU(m.kg_armadura) + '</td><td class="num">' + NUMU(m.kg_insertos) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+      '<div class="help">Totales de las actas de liberación firmadas con el cliente (últimos 8 meses con actas). «Sin certificar» = actas con fecha posterior al último mes certificado.</div>';
+  }
+  if (o.notas) h += '<div class="help"><b>Notas.</b> ' + esc(o.notas) + '</div>';
+  return h + '</div>';
+}
+function vistaObras(){
+  var O = D.obras, rolA = (D.publicacion || {}).rol;
+  var cab = '<div class="ges-cab"><div><h2>Obras y órdenes de compra</h2><div class="help" style="margin:0">Avance, certificados, facturación, cobro y anticipos de cada OC de clientes, para Ventas, Cobranzas y Producción.</div></div>' + obrSubida() + '</div>' +
+    (obr.msg ? '<div class="banner' + obr.msg.cls + '">' + obr.msg.html + '</div>' : '');
+  if (!O || !O.obras) {
+    $("vista").innerHTML = '<div class="panel">' + cab + (O && O.error ? '<div class="banner bad">' + esc(O.error) + '</div>' : '<div class="help">Todavía no hay planilla «Seguimiento de obras». Subila con el botón o dejala en la carpeta de entrada de Drive: FINETIA la reconoce por sus hojas (Obras, Facturas, Producción y Posiciones).</div>') + '</div>';
+    return obrEnlazar();
+  }
+  var L = O.obras.filter(function(o){ return ent === "GRUPO" || o.empresa === ent; }), R = O.resumen[ent] || {};
+  var al = O.alertas.filter(function(a){ return ent === "GRUPO" || a.empresa === ent; });
+  var pend = L.filter(function(o){ return o.produccion && o.produccion.sin_certificar && o.produccion.sin_certificar.actas; });
+  var h = '<div class="panel">' + cab + '<div style="margin:10px 0">' + selector() + '</div><div class="kpis">' +
+    kpi("Obras en curso", NUMU(R.en_curso), R.obras + " órdenes de compra en la planilla", "") +
+    kpi("Facturado con IVA", MM(R.facturado_total), "neto de notas de crédito y anticipos", "") +
+    kpi("Cobrado", MM(R.cobrado), R.facturado_total ? pct(R.cobrado / R.facturado_total) + " de lo facturado" : "", "") +
+    kpi("A cobrar", MM(R.a_cobrar), R.vencido ? MM(R.vencido) + " vencido" : "nada vencido", R.vencido ? "warn" : "") + '</div>';
+  if (al.length) {
+    var ver = obr.todas ? al : al.slice(0, 6);
+    h += '<h4 style="margin:14px 0 6px">Qué mirar</h4><ul class="mirar">' + ver.map(function(a){ return '<li class="' + (a.nivel === "alta" ? "r" : a.nivel === "media" ? "w" : "") + '"><span class="prio ' + a.nivel + '">' + a.nivel + '</span>' + esc(a.texto) + '</li>'; }).join("") + '</ul>' +
+      (al.length > 6 ? '<button class="enlace" id="obr_todas">' + (obr.todas ? 'Ver menos' : 'Ver los ' + al.length + ' puntos') + '</button>' : '');
+  }
+  h += '</div>';
+  var filas = L.map(function(o){
+    var ult = o.certificados.filter(function(c){ return c.cert && c.vigentes; }).slice(-1)[0], sc = o.produccion && o.produccion.sin_certificar;
+    return '<tr' + (obr.abierta === o.oc ? ' style="background:var(--accent-bg)"' : '') + '><td><b>' + esc(o.obra) + '</b><div class="help" style="margin:0">' + esc(o.cliente_final || o.cliente) + ' · OC ' + esc(o.oc) + ' · ' + o.empresa + '</div></td>' +
+      '<td><span class="pill ' + (o.en_curso ? 'ok' : '') + '">' + esc(o.estado) + '</span></td>' +
+      '<td class="num">' + MM(o.facturado_total) + '</td><td class="num">' + MM(o.cobrado) + '</td><td class="num">' + MM(o.a_cobrar) + (o.vencido ? '<div class="help" style="margin:0;color:var(--bad)">' + MM(o.vencido) + ' vencido</div>' : '') + '</td>' +
+      '<td>' + obrBarra(o) + '</td><td>' + (ult ? 'N.º ' + esc(ult.cert) + ' · ' + MESL(ult.periodo) : (o.certificados.length ? 'última factura ' + dmy(o.ultima_factura) : '—')) + '</td>' +
+      '<td>' + (o.produccion && o.produccion.ultima_acta ? dmy(o.produccion.ultima_acta) + (sc && sc.actas ? '<div class="help" style="margin:0;color:var(--warn)">' + sc.actas + ' sin certificar</div>' : '') : (o.posiciones ? NUMU(o.posiciones.entregadas) + ' de ' + NUMU(o.posiciones.unidades) + ' u.' : '—')) + '</td>' +
+      '<td><button class="btn ghost" style="padding:4px 10px" data-obra="' + esc(o.oc) + '">' + (obr.abierta === o.oc ? 'Cerrar' : 'Detalle') + '</button></td></tr>';
+  }).join("");
+  h += '<div class="panel"><h3>Órdenes de compra</h3><div class="scrollx"><table class="tl"><thead><tr><th>Obra</th><th>Estado</th><th class="n">Facturado</th><th class="n">Cobrado</th><th class="n">A cobrar</th><th>Cobro</th><th>Último certificado</th><th>Última acta / unidades</th><th></th></tr></thead><tbody>' + filas + '</tbody></table></div>' +
+    '<div class="help">Importes con IVA. La barra muestra cobrado (verde), a cobrar (celeste) y vencido (rojo). Cobrada = ya no figura en la cartera a cobrar o el banco / Tango la dan por cobrada. Una nota de crédito por el mismo total anula la factura; si el mismo certificado se facturó dos veces sin nota, la anterior se toma como rechazada y se avisa. ' +
+    (O.corte_cartera ? 'Cartera al ' + dmy(O.corte_cartera) + '. ' : '') + (O.archivo ? 'Planilla: ' + esc(O.archivo) + '.' : '') + '</div></div>';
+  var o = L.filter(function(x){ return x.oc === obr.abierta; })[0];
+  if (o) h += obrDetalle(o);
+  $("vista").innerHTML = h;
+  obrEnlazar();
+}
 function pintar(){
   if (!D) return;
   var rolAct = (D.publicacion || {}).rol;
-  if (rolAct === "cobranzas" && tab !== "gestion" && tab !== "ventas") { tab = "gestion"; marcarTab(); }
+  if (rolAct === "cobranzas" && tab !== "gestion" && tab !== "ventas" && tab !== "obras") { tab = "gestion"; marcarTab(); }
+  if (rolAct === "produccion" && tab !== "obras") { tab = "obras"; marcarTab(); }
+  if (tab === "obras" && rolAct !== "admin" && rolAct !== "cobranzas" && rolAct !== "produccion") { tab = "resumen"; marcarTab(); }
   if (tab === "gestion" && rolAct !== "admin" && rolAct !== "cobranzas") { tab = "resumen"; marcarTab(); }
   encabezado(); configurarChat();
-  if (tab === "gestion") vistaGestion(); else if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "garantias") vistaGarantias(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
-  $("pie").textContent = rolAct === "cobranzas" ? "FINETIA · Panel del equipo de Cobranzas · Lo que guardás entra al flujo en el momento." : "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
+  if (tab === "gestion") vistaGestion(); else if (tab === "obras") vistaObras(); else if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "garantias") vistaGarantias(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
+  $("pie").textContent = rolAct === "produccion" ? "FINETIA · Seguimiento de obras · Cifras en pesos con IVA salvo que se indique; “M” = millones." : rolAct === "cobranzas" ? "FINETIA · Panel del equipo de Cobranzas · Lo que guardás entra al flujo en el momento." : "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
 }
 function marcarTab(){ document.querySelectorAll("nav.tabs button").forEach(function(x){ x.setAttribute("aria-selected", x.getAttribute("data-tab") === tab); }); }
 document.querySelectorAll("nav.tabs button").forEach(function(b){
