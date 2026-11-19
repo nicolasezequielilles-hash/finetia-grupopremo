@@ -712,11 +712,24 @@ function panelQueMirar(){
   if (ent === "GRUPO") h += '<div class="help">Para el grupo se suman los acuerdos de las dos empresas, lo que supone pasar fondos de PM a HC. Sin pasar fondos, el margen mínimo es ' + MM(Math.min.apply(null, F.margen_sin_intercompany || F.margen)) + '.</div>';
   return h + '</div>';
 }
+function panelCobertura(C){
+  if (!C || !C.cuentas || !C.cuentas.length) return '';
+  var L = C.cuentas.filter(function(c){ return (c.emp === "HC" || c.emp === "PM") && (c.moneda || "ARS") === "ARS"; }), ms = {};
+  L.forEach(function(c){ Object.keys(c.meses || {}).forEach(function(m){ ms[m] = 1; }); });
+  var meses = Object.keys(ms).sort().slice(-6);
+  var tot = function(e, m){ return L.filter(function(c){ return !e || c.emp === e; }).reduce(function(a, c){ return a + (((c.meses || {})[m] || {}).cobros || 0); }, 0); };
+  var filas = L.map(function(c){ return '<tr><td>' + esc(c.cuenta) + '<div class="help" style="margin:0">' + esc(c.archivo || "") + '</div></td><td>' + c.emp + '</td><td class="num">' + dmy(c.desde) + '</td><td class="num">' + dmy(c.hasta) + '</td>' +
+    meses.map(function(m){ var x = (c.meses || {})[m]; return '<td class="num">' + (x ? MM(x.cobros) + '<small style="display:block;color:var(--ink-3)">' + x.movs + ' mov.</small>' : '<span class="neg">sin movimientos</span>') + '</td>'; }).join("") + '</tr>'; }).join("");
+  var pie = ["HC", "PM", ""].map(function(e){ return '<tr class="tot"><td colspan="4">Cobranzas de clientes · ' + (e ? NOMBRE[e] : "grupo") + '</td>' + meses.map(function(m){ return '<td class="num">' + MM(tot(e, m)) + '</td>'; }).join("") + '</tr>'; }).join("");
+  return '<div class="panel"><h3>Extractos bancarios por cuenta</h3><div class="help" style="margin:0 0 8px">' + C.leidos + ' archivos leídos en la última actualización. Por mes: cobranzas y transferencias de clientes que entraron a cada cuenta (en pesos) y cantidad de movimientos. «Sin movimientos» en medio de meses con datos, o un «hasta» viejo, es un extracto que falta.</div>' +
+    '<div class="scrollx"><table class="tl"><thead><tr><th>Cuenta</th><th>Emp.</th><th class="n">Desde</th><th class="n">Hasta</th>' + meses.map(function(m){ return '<th class="n">' + MES_CORTO(m) + '</th>'; }).join("") + '</tr></thead><tbody>' + filas + pie + '</tbody></table></div></div>';
+}
 function vistaAdmin(){
   var cal = (D.meta && D.meta.calidad) || {}, h = "";
   h += '<div class="panel"><h3>Administración</h3><div class="help" style="margin:0">Esta pestaña la ves solo vos. Acá están el estado de los archivos de Drive, los avisos de lectura y la configuración del asistente de IA. Los accionistas ven únicamente el informe publicado.</div></div>';
   if ((cal.entradas || []).length) h += panelEntradas(cal.entradas);
   if ((cal.avisos || []).length) h += '<div class="panel"><h3>Avisos de la última actualización</h3>' + cal.avisos.map(function(a){ return '<div class="help" style="margin-top:4px">▲ ' + esc(a) + '</div>'; }).join("") + '</div>';
+  h += panelCobertura(cal.cobertura_extractos);
   h += panelIAAdmin();
   $("vista").innerHTML = h;
   accionesIAAdmin();
@@ -881,7 +894,7 @@ function gesTango(){
     '<tr><td>Días de emisión a cobro</td>' + K.meses.map(function(m){ return '<td class="num"><b>' + Math.round(m.dias) + '</b></td>'; }).join("") + '</tr>' +
     '<tr><td>Facturas medidas</td>' + K.meses.map(function(m){ return '<td class="num">' + m.n + '</td>'; }).join("") + '</tr>' +
     '<tr><td>Importe medido en Tango<small style="display:block;color:var(--ink-3)">' + esc(medidas) + '</small></td>' + K.meses.map(function(m){ return '<td class="num">' + MM(m.importe) + '</td>'; }).join("") + '</tr>' +
-    (solo ? '<tr><td>Entró a los bancos<small style="display:block;color:var(--ink-3)">' + NOMBRE[solo] + '</small></td>' + K.meses.map(function(m){ return bco(m, solo); }).join("") + '</tr>' : '') +
+    emps.map(function(e){ return '<tr><td>Entró a los bancos<small style="display:block;color:var(--ink-3)">' + NOMBRE[e] + '</small></td>' + K.meses.map(function(m){ return bco(m, e); }).join("") + '</tr>'; }).join("") +
     '<tr class="tot"><td>Entró a los bancos<small style="display:block;font-weight:400;color:var(--ink-3)">todo el grupo</small></td>' + K.meses.map(function(m){ return bco(m, "total"); }).join("") + '</tr></tbody></table></div>' +
     '<div class="help" style="margin-bottom:12px">El importe medido no es todo lo cobrado: son las facturas que sirven para medir el plazo (las de los reportes de Tango cargados, con fecha de emisión y de cobro, sin lo facturado entre empresas del grupo ni los cobros a cuenta anteriores a la factura). ' +
     'Lo que entró a los bancos son las transferencias y cobranzas de clientes de los extractos, más los echeqs de clientes entregados a proveedores' + (Object.keys(B).length ? '' : ' (todavía no está en este informe)') + '. ' +
