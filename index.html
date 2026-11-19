@@ -796,6 +796,7 @@ function vistaCobranzas(){
     C.clientes.map(function(c){ return '<tr><td>' + esc(c.cliente) + '</td><td>' + c.emp + '</td><td class="num">' + c.facturas + '</td><td class="num"><b>' + mm(c.importe) + '</b></td><td class="num' + (c.vencido > 0 ? " neg" : "") + '">' + mm(c.vencido) + '</td><td class="num">' + mm(c.a_30) + '</td><td class="num">' + mm(c.mas_30) + '</td><td class="num">' + (c.con_fecha_real || "—") + '</td></tr>'; }).join("") +
     (C.otros_clientes ? '<tr class="tot"><td>Otros ' + C.otros_clientes + ' clientes</td><td></td><td></td><td class="num">' + mm(C.importe_otros) + '</td><td></td><td></td><td></td><td></td></tr>' : "") + '</tbody></table></div>' +
     '<div class="help">Echeqs de clientes en cartera: ' + C.echeqs_en_cartera.cantidad + ' por ' + MM(C.echeqs_en_cartera.importe) + '. “Con fecha real” indica que el equipo de Cobranzas informó cuándo se cobra esa factura.' +
+    (t.ya_cobradas ? ' ' + t.ya_cobradas + (t.ya_cobradas === 1 ? ' factura por ' : ' facturas por ') + MM(t.importe_ya_cobrado) + (t.ya_cobradas === 1 ? ' sigue en el archivo de cartera pero ya está cobrada' : ' siguen en el archivo de cartera pero ya están cobradas') + ' (según Tango, el banco o Cobranzas): no se cuentan en la cartera ni en lo vencido.' : '') +
     (t.fuera ? ' ' + t.fuera + (t.fuera === 1 ? ' factura por ' : ' facturas por ') + MM(t.importe_fuera) + ' en disputa o demoradas quedaron fuera del flujo de 13 semanas.' : '') +
     (t.despues ? ' ' + t.despues + (t.despues === 1 ? ' factura por ' : ' facturas por ') + MM(t.importe_despues) + (t.despues === 1 ? ' se espera' : ' se esperan') + ' después de la semana 13, por la fecha comprometida o por lo que tarda en pagar el cliente.' : '') +
     (D.tango && D.tango.kpi && D.tango.kpi.actual ? ' El plazo real de cobro mide los días entre la emisión y el cobro de lo cobrado en los últimos 90 días, según Tango; el flujo usa esos plazos.' : '') +
@@ -824,7 +825,7 @@ function gesFila(f){
   var v = gesValor(f), b = gesBase(f), cambio = v.fecha !== b.fecha || v.estado !== b.estado || v.nota !== b.nota, G = D.gestion;
   return '<tr data-fac="' + esc(f.clave) + '"' + (cambio ? ' class="cambio"' : '') + '><td>' + esc(f.comprobante) + '</td><td>' + f.emp + '</td><td>' + dm(f.emision) + '</td><td>' + dmy(f.venc_esperado) +
     (f.dias_vencida ? ' <span class="neg">(' + f.dias_vencida + ' d)</span>' : '') + '</td><td class="num">' + PESOS(f.importe) + '</td><td>' + gesEnFlujo(f) + '</td>' +
-    (f.efecto === "tango" ? '<td colspan="3" class="help" style="margin:0">' + (f.fuente_cobro === "banco" ? 'El cobro ya entró al banco' : 'Tango ya la da por cobrada') + ': sale sola de la cartera cuando se suba una más nueva.</td></tr>' :
+    (f.efecto === "tango" ? '<td colspan="3" class="help" style="margin:0">' + (f.fuente_cobro === "banco" ? 'El cobro ya entró al banco' : 'Tango ya la da por cobrada') + (f.fecha_tango ? ' (' + dmy(f.fecha_tango) + ')' : '') + ': sale sola de la cartera cuando se suba una más nueva.</td></tr>' :
     '<td><input type="date" data-g="fecha" aria-label="Fecha comprometida de ' + esc(f.comprobante) + '" value="' + esc(v.fecha) + '"></td>' +
     '<td><select data-g="estado" aria-label="Estado de ' + esc(f.comprobante) + '"><option value="">Sin estado</option>' + G.estados.map(function(e){ return '<option value="' + e[0] + '"' + (v.estado === e[0] ? " selected" : "") + '>' + esc(e[1]) + '</option>'; }).join("") + '</select></td>' +
     '<td><input type="text" data-g="nota" maxlength="' + G.max_nota + '" aria-label="Nota de ' + esc(f.comprobante) + '" placeholder="Nota" value="' + esc(v.nota) + '"></td></tr>');
@@ -832,22 +833,25 @@ function gesFila(f){
 function gesPasa(f){
   var v = gesValor(f), q = ges.q.trim().toLowerCase();
   if (q && (f.cliente + " " + f.comprobante).toLowerCase().indexOf(q) < 0) return false;
-  if (ges.filtro === "vencidas") return f.dias_vencida > 0;
-  if (ges.filtro === "sin_fecha") return !v.fecha && v.estado !== "disputa" && f.efecto !== "tango";
+  if (ges.filtro === "vencidas") return f.dias_vencida > 0 && !f.cobrada;
+  if (ges.filtro === "sin_fecha") return !v.fecha && v.estado !== "disputa" && f.efecto !== "tango" && !f.cobrada;
   if (ges.filtro === "promesas") return f.efecto === "promesa_vencida";
   if (ges.filtro === "cambios") return !!gesCambios({facturas: [f]}).length;
   return true;
 }
 function gesTabla(){
-  var G = D.gestion, vis = G.facturas.filter(gesPasa), grupos = [], idx = {};
+  var G = D.gestion, todas = G.facturas.filter(gesPasa), vis = todas.filter(function(f){ return !f.cobrada; }), ya = todas.filter(function(f){ return f.cobrada; }), grupos = [], idx = {};
+  var cab = '<thead><tr><th>Comprobante</th><th>Emp.</th><th>Emisión</th><th>Vence</th><th class="n">Importe<small>con IVA</small></th><th>Hoy en el flujo</th><th>Fecha comprometida</th><th>Estado</th><th>Nota</th></tr></thead>';
+  var bloqueYa = !ya.length ? '' : '<details class="ges-ya" style="margin-top:12px"' + (ges.verYa ? ' open' : '') + ' ontoggle="ges.verYa=this.open"><summary><b>Ya cobradas · ' + ya.length + (ya.length === 1 ? ' factura por ' : ' facturas por ') + PESOS(ya.reduce(function(a, f){ return a + f.importe; }, 0)) + '</b> <span class="help" style="margin:0">— siguen en el archivo de cartera, pero Tango, el banco o Cobranzas ya las dan por cobradas: no cuentan en la cartera ni en lo vencido, y desaparecen solas cuando se sube la cartera nueva de Tango</span></summary>' +
+    '<div class="scrollx"><table class="ges">' + cab + '<tbody>' + ya.slice().sort(function(a, b){ return (a.cliente + a.comprobante).localeCompare(b.cliente + b.comprobante); }).map(function(f){ return gesFila(f).replace('<td>' + esc(f.comprobante) + '</td>', '<td>' + esc(f.comprobante) + '<div class="help" style="margin:0">' + esc(f.cliente) + '</div></td>'); }).join("") + '</tbody></table></div></details>';
   vis.forEach(function(f){ var k = f.cliente; if (!(k in idx)) { idx[k] = grupos.length; grupos.push({cliente: k, fs: [], imp: 0, venc: 0}); } var g = grupos[idx[k]]; g.fs.push(f); g.imp += f.importe; if (f.dias_vencida) g.venc += f.importe; });
   grupos.sort(function(a, b){ return b.imp - a.imp; });
-  if (!vis.length) return '<p class="help" style="margin:14px 0">No hay facturas que coincidan con el filtro.</p>';
-  return '<div class="scrollx"><table class="ges"><thead><tr><th>Comprobante</th><th>Emp.</th><th>Emisión</th><th>Vence</th><th class="n">Importe<small>con IVA</small></th><th>Hoy en el flujo</th><th>Fecha comprometida</th><th>Estado</th><th>Nota</th></tr></thead><tbody>' +
+  if (!vis.length) return '<p class="help" style="margin:14px 0">No hay facturas abiertas que coincidan con el filtro.</p>' + bloqueYa;
+  return '<div class="scrollx"><table class="ges">' + cab + '<tbody>' +
     grupos.map(function(g){
       return '<tr class="cli"><td colspan="4">' + esc(g.cliente) + '<span class="sub">' + g.fs.length + (g.fs.length === 1 ? " factura" : " facturas") + (g.venc ? ' · vencido ' + PESOS(g.venc) : '') + '</span></td><td class="num">' + PESOS(g.imp) + '</td><td></td>' +
         '<td colspan="3">' + (g.fs.length > 1 ? '<label style="font-weight:400;font-size:12px;margin:0">Fecha para todas: <input type="date" data-cli="' + esc(g.cliente) + '" aria-label="Misma fecha para todas las facturas de ' + esc(g.cliente) + '"></label>' : '') + '</td></tr>' + g.fs.map(gesFila).join("");
-    }).join("") + '</tbody></table></div>';
+    }).join("") + '</tbody></table></div>' + bloqueYa;
 }
 function gesBarra(){
   var n = gesCambios(D.gestion).length, b = $("ges_guardar_caja"); if (!b) return;
@@ -869,12 +873,19 @@ function gesTango(){
   var G = D.gestion, T = G.totales, P = G.plazos || {}, R = P.reales || {}, F = P.flujo || {}, O = P.origen || {}, emps = Object.keys(R).sort(), arch = (G.archivos || {}).tango || [], K = (P.kpi || {}).GRUPO;
   if (!emps.length && !arch.length) return '';
   var h = '<div class="panel"><h3>Plazo real de cobro · según Tango</h3>';
-  if (T.cobradas_tango) h += '<p style="margin:0 0 10px"><b>' + T.cobradas_tango + (T.cobradas_tango === 1 ? ' factura' : ' facturas') + ' por ' + MM(T.importe_cobradas_tango) + '</b> ' + (T.cobradas_tango === 1 ? 'sigue abierta en la cartera pero Tango o el banco ya la dan por cobrada' : 'siguen abiertas en la cartera pero Tango o el banco ya las dan por cobradas') +
-    (T.cobradas_tango === 1 ? '. Se marcó sola y el flujo no la vuelve a contar.' : '. Se marcaron solas y el flujo no las vuelve a contar.') + '</p>';
-  if (K && K.meses && K.meses.length) h += '<div class="scrollx"><table class="ges" style="margin-bottom:12px"><thead><tr><th>Cobrado en</th>' + K.meses.map(function(m){ return '<th class="n">' + MES_CORTO(m.mes) + '</th>'; }).join("") + '</tr></thead><tbody>' +
+  if (T.cobradas_tango) h += '<p style="margin:0 0 10px"><b>' + T.cobradas_tango + (T.cobradas_tango === 1 ? ' factura' : ' facturas') + ' por ' + MM(T.importe_cobradas_tango) + '</b> ' + (T.cobradas_tango === 1 ? 'del archivo de cartera ya está cobrada' : 'del archivo de cartera ya están cobradas') +
+    ' según Tango o el banco: salieron de la cartera abierta (las ves al final de la lista, en «Ya cobradas») y el flujo no las vuelve a contar.</p>';
+  var B = P.bancos || {}, medidas = emps.map(function(e){ return NOMBRE[e]; }).join(" y "), solo = emps.length === 1 ? emps[0] : null;
+  var bco = function(m, k){ var b = B[m.mes]; return '<td class="num">' + (b ? MM(b[k]) + (b.completo ? '' : '<small style="display:block;color:var(--ink-3)">en curso</small>') : '—') + '</td>'; };
+  if (K && K.meses && K.meses.length) h += '<div class="scrollx"><table class="ges" style="margin-bottom:6px"><thead><tr><th>Cobrado en</th>' + K.meses.map(function(m){ return '<th class="n">' + MES_CORTO(m.mes) + '</th>'; }).join("") + '</tr></thead><tbody>' +
     '<tr><td>Días de emisión a cobro</td>' + K.meses.map(function(m){ return '<td class="num"><b>' + Math.round(m.dias) + '</b></td>'; }).join("") + '</tr>' +
-    '<tr><td>Facturas cobradas</td>' + K.meses.map(function(m){ return '<td class="num">' + m.n + '</td>'; }).join("") + '</tr>' +
-    '<tr><td>Importe cobrado</td>' + K.meses.map(function(m){ return '<td class="num">' + MM(m.importe) + '</td>'; }).join("") + '</tr></tbody></table></div>';
+    '<tr><td>Facturas medidas</td>' + K.meses.map(function(m){ return '<td class="num">' + m.n + '</td>'; }).join("") + '</tr>' +
+    '<tr><td>Importe medido en Tango<small style="display:block;color:var(--ink-3)">' + esc(medidas) + '</small></td>' + K.meses.map(function(m){ return '<td class="num">' + MM(m.importe) + '</td>'; }).join("") + '</tr>' +
+    (solo ? '<tr><td>Entró a los bancos<small style="display:block;color:var(--ink-3)">' + NOMBRE[solo] + '</small></td>' + K.meses.map(function(m){ return bco(m, solo); }).join("") + '</tr>' : '') +
+    '<tr class="tot"><td>Entró a los bancos<small style="display:block;font-weight:400;color:var(--ink-3)">todo el grupo</small></td>' + K.meses.map(function(m){ return bco(m, "total"); }).join("") + '</tr></tbody></table></div>' +
+    '<div class="help" style="margin-bottom:12px">El importe medido no es todo lo cobrado: son las facturas que sirven para medir el plazo (las de los reportes de Tango cargados, con fecha de emisión y de cobro, sin lo facturado entre empresas del grupo ni los cobros a cuenta anteriores a la factura). ' +
+    'Lo que entró a los bancos son las transferencias y cobranzas de clientes de los extractos, más los echeqs de clientes entregados a proveedores' + (Object.keys(B).length ? '' : ' (todavía no está en este informe)') + '. ' +
+    'En un mes, Tango puede dar más que el banco: los echeqs se cuentan cuando se reciben y las retenciones son parte del recibo, pero no entran al banco.</div>';
   var filas = [];
   emps.forEach(function(e){ [["aesa", "A-Evangelista"], ["resto", "Resto de los clientes"]].forEach(function(c){ var r = (R[e] || {})[c[0]]; if (!r) return;
     filas.push('<tr><td>' + NOMBRE[e] + ' · ' + c[1] + '</td><td class="num"><b>' + Math.round(r.dias) + ' días</b></td><td class="num">' + r.n + '</td><td class="num">' + MM(r.importe) + '</td></tr>'); });
@@ -919,7 +930,7 @@ function vistaGestion(){
     '<button class="btn ghost" id="ges_actualizar"' + (ges.ocupado ? " disabled" : "") + ' title="Vuelve a leer la cartera y el pronóstico de ventas de Drive y recalcula el flujo">' + (ges.ocupado ? "Actualizando…" : "Actualizar desde Drive") + '</button></div></div>';
   if (G.en_curso) h += '<div class="banner ges-msg">Se está corriendo la actualización general del informe. Lo que guardes entra al flujo cuando termine, en unos minutos.</div>';
   if (ges.msg) h += '<div class="banner ges-msg' + ges.msg.cls + '" role="status">' + ges.msg.html + '</div>';
-  h += '<div class="kpis">' + kpiPlazo(((G.plazos || {}).kpi || {}).GRUPO) + kpi("Cartera a cobrar", MM(T.importe), T.facturas + " facturas abiertas (con IVA)", "") +
+  h += '<div class="kpis">' + kpiPlazo(((G.plazos || {}).kpi || {}).GRUPO) + kpi("Cartera a cobrar", MM(T.importe), T.facturas + " facturas abiertas (con IVA)" + (T.ya_cobradas ? " · sin las " + T.ya_cobradas + " ya cobradas" : ""), "") +
     kpi("Vencida", MM(T.vencido), pct(T.vencido / (T.importe || 1)) + " de la cartera" + (T.sin_gestion_vencidas ? " · " + T.sin_gestion_vencidas + " sin gestión" : ""), T.vencido > 0 ? "bad" : "ok") +
     kpi("Con fecha comprometida", T.con_fecha + (T.con_fecha === 1 ? " factura" : " facturas"), MM(T.importe_con_fecha), T.con_fecha ? "ok" : "") +
     kpi("Promesas vencidas", T.promesas_vencidas + (T.promesas_vencidas === 1 ? " factura" : " facturas"), T.promesas_vencidas ? MM(T.importe_promesas) + " · hay que poner fecha nueva" : "Ninguna", T.promesas_vencidas ? "bad" : "ok") +
@@ -968,7 +979,7 @@ function gesEditar(t){
   var G = D.gestion, tr = t.closest("tr[data-fac]");
   if (t.hasAttribute("data-cli")) {                           // misma fecha para todas las facturas visibles del cliente
     var cli = t.getAttribute("data-cli"), val = t.value;
-    G.facturas.filter(function(f){ return f.cliente === cli && gesPasa(f) && f.efecto !== "tango"; }).forEach(function(f){ var v = gesValor(f); ges.ed[f.clave] = {fecha: val, estado: v.estado === "cobrada" ? "" : v.estado, nota: v.nota}; });
+    G.facturas.filter(function(f){ return f.cliente === cli && gesPasa(f) && f.efecto !== "tango" && !f.cobrada; }).forEach(function(f){ var v = gesValor(f); ges.ed[f.clave] = {fecha: val, estado: v.estado === "cobrada" ? "" : v.estado, nota: v.nota}; });
     $("ges_tabla").innerHTML = gesTabla(); gesBarra(); return;
   }
   if (!tr) return;
@@ -1462,9 +1473,10 @@ function obrDetalle(o){
     h += '<h4 style="margin:16px 0 6px">Anticipo del ' + NUMU(A.pct) + '%</h4><div class="kpis">' +
       kpi("Anticipo según la OC", (A.moneda === "USD" ? "US$ " : "$ ") + NUMU(A.monto_oc), A.factura ? "factura " + CB(A.factura) + " del " + dmy(A.fecha) : "sin factura de anticipo cargada", "") +
       kpi("Anticipo cobrado (neto)", A.anticipo_neto !== null ? MM(A.anticipo_neto) : "—", A.tc_implicito ? "a $ " + NUMU(A.tc_implicito, 2) + " por dólar (implícito)" : "", "") +
-      kpi("Ya descontado en facturas", MM(A.aplicado_neto), A.notas + " notas de crédito" + (A.sobre_facturado ? " · " + NUMU(100 * A.sobre_facturado, 1) + "% de lo entregado" : ""), A.fuera_de_pct.length ? "warn" : "") +
+      kpi("Ya descontado en facturas", MM(A.aplicado_neto), A.notas + " notas de crédito" + (A.descuento_total ? " · aparte, " + MM(A.descuento_total) + " de descuento a explicar" : ""), A.fuera_de_pct.length || A.descuento_total ? "warn" : "") +
       kpi("Saldo por descontar", A.saldo_neto !== null ? MM(A.saldo_neto) : "—", A.avance_oc !== null ? "entregado ≈ " + (A.moneda === "USD" ? "US$ " : "") + NUMU(A.entregado_moneda) + " (" + pct(A.avance_oc) + " de la OC)" : "", A.saldo_neto !== null && A.saldo_neto < 0 ? "bad" : "") + '</div>' +
-      '<div class="help">El anticipo es un pasivo con el cliente hasta que se entrega: cada factura de entrega lleva una nota de crédito del ' + NUMU(A.pct) + '% del mismo día que lo descuenta, por eso la cartera ya muestra las facturas netas. El tipo de cambio implícito sale de dividir el anticipo cobrado en pesos por el ' + NUMU(A.pct) + '% del monto de la OC.</div>';
+      '<div class="help">El anticipo es un pasivo con el cliente hasta que se entrega: cada factura de entrega lleva una nota de crédito del ' + NUMU(A.pct) + '% del mismo día que lo descuenta, por eso la cartera ya muestra las facturas netas. El tipo de cambio implícito sale de dividir el anticipo cobrado en pesos por el ' + NUMU(A.pct) + '% del monto de la OC.' +
+        (A.descuento_total ? ' Si una nota es mayor que el ' + NUMU(A.pct) + '%, solo el ' + NUMU(A.pct) + '% se toma como anticipo; el resto es un descuento a explicar y no consume el saldo del anticipo.' : '') + '</div>';
   }
   var PO = o.posiciones;
   if (PO) {
@@ -1480,7 +1492,7 @@ function obrDetalle(o){
     var otras = c.facturas.filter(function(f){ return f.estado !== "vigente" && mostradas.indexOf(f) < 0; });
     mostradas.forEach(function(f, i){
       filas += '<tr><td>' + (i ? '' : (c.cert ? 'N.º ' + esc(c.cert) : (f.es_anticipo ? 'Anticipo' : (f.tipo === "ND" ? 'Nota de débito' : 'Factura')))) + '</td><td>' + (i ? '' : MESL(c.periodo)) + '</td><td>' + esc(CB(f.comprobante)) + '</td><td class="num">' + dmy(f.fecha) + '</td><td class="num">' + MM(f.total) +
-        (f.anticipo ? '<div class="help" style="margin:0">− ' + MM(f.anticipo) + ' anticipo</div>' : '') + '</td><td>' + obrCobro(f) + '</td><td class="help" style="margin:0;white-space:normal">' +
+        (f.anticipo ? '<div class="help" style="margin:0">− ' + MM(f.anticipo_aplicado) + ' anticipo' + (f.descuento > 1 ? '<br>− ' + MM(f.descuento) + ' descuento a explicar' : '') + '</div>' : '') + '</td><td>' + obrCobro(f) + '</td><td class="help" style="margin:0;white-space:normal">' +
         (i ? '' : otras.map(function(x){ return esc(CB(x.comprobante)) + ' ' + (x.estado === "anulada" ? 'anulada' : 'rechazada'); }).join(" · ")) + '</td></tr>';
     });
   });
