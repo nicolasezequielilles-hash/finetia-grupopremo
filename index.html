@@ -149,6 +149,8 @@ table.ges .etq.bad{color:var(--bad)}table.ges .etq.warn{color:var(--warn)}table.
 .ges-guardar .acc{display:flex;gap:8px}
 .ges-msg{margin-bottom:14px}
 .ges-filtros .seg{display:flex;flex-wrap:wrap}
+table.fl button.eslink{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+table.fl button.eslink:hover,table.fl button.eslink:focus-visible{color:var(--accent-deep);text-decoration-style:solid}
 @media (max-width:600px){.ges-filtros .seg button{padding:7px 10px;font-size:12px;flex:1 1 auto}.ges-cab .acc .btn{flex:1 1 auto}}
 @media print{.ges-guardar,.ges-cab .acc,.ges-filtros{display:none!important}}
 .prio{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:9px;border:1px solid currentColor;margin-right:6px;vertical-align:1px;white-space:nowrap}
@@ -636,17 +638,19 @@ function tablaFlujo(L, n, F, pos0){
   var det = function(lbl, k, c){ return '<tr class="det"><td><span class="dot ' + c + '"></span>' + lbl + '</td>' + L[k].map(function(v){ return cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
   var sub = function(lbl, k){ return '<tr class="sub"><td>' + lbl + '</td>' + L[k].map(function(v){ return cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
   var sec = function(lbl){ return '<tr class="sec"><td colspan="' + (n + 2) + '">' + lbl + '</td></tr>'; };
+  var adm = !!(D.publicacion && D.publicacion.rol === "admin" && D.meta.echeqs_registro && D.echeqs && D.echeqs.pendientes);     // el administrador puede abrir los echeqs de cada semana
+  var detE = function(lbl, k, c){ return '<tr class="det"><td><span class="dot ' + c + '"></span>' + lbl + '</td>' + L[k].map(function(v, i){ return v ? '<td class="num"><button class="eslink" data-ech-sem="' + D.semanas[i].n + '" title="Ver los echeqs de esta semana">' + par(v) + '</button></td>' : cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
   var h = '<div class="legend"><span><span class="dot c"></span>Comprometido: ya registrado (facturas, cheques, planes)</span><span><span class="dot"></span>Estimado: ritmo real de pagos y cobranzas de los extractos, o calendario del informe</span></div><div class="scrollx"><table class="fl">' + cab + '<tbody>';
   h += '<tr class="ini"><td>Saldo bancario inicial (todos los bancos)</td><td class="num">' + par(pos0) + '</td>' + new Array(n + 1).join("<td></td>") + '</tr>';
   h += sec("Ingresos") + det("Cobranzas de clientes (cuentas a cobrar)", "cob_clientes", "c") + det("Echeqs de clientes en cartera", "cob_echeq", "c") + det("Cobranzas de ventas nuevas", "cob_nuevas", "") + sub("Total ingresos", "ingresos");
-  h += sec("Egresos operativos") + det(D.meta.echeqs_registro ? "Echeqs emitidos, pendientes de débito" : "Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + det(D.meta.echeqs_registro ? "Proveedores: facturas a pagar (transferencia o echeq a emitir)" : "Proveedores: transferencias y cuenta corriente", "pag_transf", "c") + det("Proveedores: ritmo estimado de pagos", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
+  h += sec("Egresos operativos") + (adm ? detE : det)(D.meta.echeqs_registro ? "Echeqs emitidos, pendientes de débito" : "Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + det(D.meta.echeqs_registro ? "Proveedores: facturas a pagar (transferencia o echeq a emitir)" : "Proveedores: transferencias y cuenta corriente", "pag_transf", "c") + det("Proveedores: ritmo estimado de pagos", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
   h += sec("Egresos fiscales") + det("Impuestos y cargas sociales", "impuestos", "") + det("Planes de ARCA (regularización de cuotas)", "arca", "c") + sub("Total egresos fiscales", "fiscal");
   h += sec("Egresos financieros") + det("Cuotas de préstamos bancarios", "fin_prestamos", "c") + det("Echeqs propios descontados que vencen", "fin_echeqs", "c") + det("Intereses bancarios, comisiones y débitos", "financieros", "") + sub("Total egresos financieros", "financ");
   h += '<tr class="res"><td>Resultado de la semana</td>' + L.resultado.map(function(v){ return cel(v); }).join("") + cel(SUMA(L.resultado)) + '</tr>';
   h += '<tr class="sub"><td>Saldo bancario final (posición)</td>' + L.posicion.map(function(v){ return cel(v, v < -F.acuerdo ? "bajo" : ""); }).join("") + '<td></td></tr>';
   h += '<tr><td>Margen disponible sobre acuerdos</td>' + L.margen.map(function(v){ return cel(v); }).join("") + '<td></td></tr>';
   h += '<tr><td>Certeza: parte comprometida del movimiento</td>' + L.certeza.map(function(v){ return '<td class="num"><span class="cert"><i><b style="width:' + Math.round((v || 0) * 100) + '%"></b></i>' + pct(v) + '</span></td>'; }).join("") + '<td></td></tr>';
-  return h + '</tbody></table></div>';
+  return h + '</tbody></table></div>' + (adm ? '<div class="help">Tocá un importe de «Echeqs emitidos, pendientes de débito» para ver qué echeqs lo componen en esa semana.</div>' : "");
 }
 function sinDetalle(){ $("vista").innerHTML = '<div class="panel">El detalle por línea se publica con la próxima actualización automática (todos los días hábiles a las 11:00).</div>'; }
 
@@ -1573,7 +1577,7 @@ function vistaObras(){
   obrEnlazar();
 }
 /* ---------- Echeqs emitidos pendientes de débito (solo administración) ---------- */
-var ech = {filtro: "todos", mas: {}};
+var ech = {filtro: "todos", mas: {}, sem: 1};
 function echDiasEntre(a, b){ return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5); }
 function echSituacion(x){
   if (x.dudoso) return '<span class="etq warn" title="' + esc(x.situacion) + '">Dudoso</span>';
@@ -1640,6 +1644,21 @@ function echControles(L, xs){
     '. Extractos del banco (CMF) hasta el <b>' + (o.extractos_hasta ? dmy(o.extractos_hasta) : "s/d") + '</b>. Registro acumulado: ' + NUMU((reg.pendiente || 0) + (reg.debitado || 0) + (reg.baja || 0)) + ' echeqs (' + NUMU(reg.pendiente || 0) + ' pendientes, ' + NUMU(reg.debitado || 0) + ' debitados, ' + NUMU(reg.baja || 0) + ' dados de baja). Un echeq entra cuando aparece en un archivo de Tango y sale cuando el extracto del banco muestra «Pago de Echeq» con su número.</div>';
   return h + '</div>';
 }
+function echSemanaBloque(L, xs, W){
+  var k = ech.sem, w = L.por_semana[k - 1] || {}, cantidad = {};
+  W.filas.forEach(function(f){ cantidad[f.k] = f.n; });
+  var ks = Object.keys(cantidad).map(Number); if (ks.indexOf(1) < 0) ks.push(1); if (ks.indexOf(k) < 0) ks.push(k); ks.sort(function(a, b){ return a - b; });
+  var ws = xs.filter(function(x){ return x.semana === k; }).sort(function(a, b){ return a.fecha_cheque < b.fecha_cheque ? -1 : (a.fecha_cheque > b.fecha_cheque ? 1 : b.importe - a.importe); });
+  var imp = SUMA(ws.map(function(x){ return x.importe; })), hc = SUMA(ws.filter(function(x){ return x.emp === "HC"; }).map(function(x){ return x.importe; })), pm = imp - hc;
+  var rot = k === 14 ? "Después de la semana 13" : "Semana " + k + (w.desde ? " · " + dm(w.desde) + "–" + dm(w.hasta) : "") + (k === 1 ? " (la de hoy)" : "");
+  var fila = function(x){ return '<tr' + (x.dudoso ? ' style="background:var(--warn-bg)"' : '') + '><td>' + x.emp + '</td><td>' + esc(x.nro) + '</td><td style="white-space:normal;max-width:300px">' + (x.proveedor ? esc(x.proveedor) : '<i>(sin proveedor asignado)</i>') + (x.tipo !== "Proveedores" ? ' <span class="etq gris">Financiamiento</span>' : '') + '</td><td>' + dmy(x.fecha_cheque) + '</td><td>' + dmy(x.fecha_flujo) + '</td><td class="num">' + NF2(x.importe) + '</td><td>' + echSituacion(x) + '</td></tr>'; };
+  return '<div class="panel" id="ech_semana"><h3>Echeqs de la semana</h3><div class="ges-filtros"><div class="seg" role="group" aria-label="Semana">' +
+    ks.map(function(j){ return '<button data-esem="' + j + '" aria-pressed="' + (j === k) + '">' + (j === 14 ? "Después" : "Sem. " + j) + ' · ' + (cantidad[j] || 0) + '</button>'; }).join("") + '</div></div>' +
+    '<div style="margin:6px 0 8px"><b>' + rot + '</b> · ' + ws.length + ' echeqs · <b>' + MM(imp) + '</b>' + (ent === "GRUPO" && ws.length ? ' <span class="help" style="margin:0">(HC ' + mm(hc) + ' · PM ' + mm(pm) + ')</span>' : '') + '</div>' +
+    '<div class="scrollx"><table class="tl ges"><thead><tr><th>Emp.</th><th>N.º de echeq</th><th>Proveedor</th><th>Fecha del cheque</th><th>Débito esperado</th><th class="n">Importe</th><th>Situación</th></tr></thead><tbody>' +
+    (ws.length ? ws.map(fila).join("") + '<tr class="tot"><td colspan="5">Total de la semana</td><td class="num">' + NF2(imp) + '</td><td></td></tr>' : '<tr><td colspan="7"><i>No hay echeqs con débito esperado en esta semana.</i></td></tr>') + '</tbody></table></div>' +
+    '<div class="help">Es el detalle de la fila «Echeqs emitidos, pendientes de débito» del flujo para esa semana. ' + (k === 1 ? 'Incluye los echeqs vencidos que el banco todavía no debitó: figuran el lunes de la semana. ' : '') + 'Tocá otra semana para ver sus echeqs.</div></div>';
+}
 function vistaEcheqs(){
   var L = D.echeqs, cab = '<div class="ges-cab"><div style="flex:1 1 340px"><h2>Echeqs emitidos pendientes de débito</h2><div class="help" style="margin:0">Todos los echeqs propios que se emitieron y el banco todavía no debitó, acumulados de los archivos de Tango. Es lo que el flujo toma como «Echeqs emitidos» y se parece a la pestaña «Echeqs Pendientes» del Informe Financiero.</div></div>' +
     '<div class="acc">' + (L && L.pendientes && L.pendientes.length ? '<button class="btn" id="ech_xlsx">Descargar Excel</button>' : '') + '</div></div>';
@@ -1659,11 +1678,12 @@ function vistaEcheqs(){
     kpi("Vencidos sin debitar", MM(imp(venc)), venc.length + " echeqs con fecha anterior a hoy · caen en la semana 1", venc.length ? "warn" : "") +
     kpi("Dudosos por falta de extracto", MM(imp(dud)), dud.length ? dud.length + " echeqs vencidos en días sin extracto del banco" : "ninguno: el banco cubre todos los días", dud.length ? "warn" : "") +
     kpi("Semana 1 del flujo", MM(imp(s1)), s1.length + " echeqs: los vencidos más lo que vence esta semana", "") + '</div></div>';
-  // por semana de débito
+  // los echeqs de la semana (como la pestaña «Echeqs Semana» del Informe Financiero) y, abajo, el resumen de todas las semanas
   var W = echSemanas(L, xs);
+  h += echSemanaBloque(L, xs, W);
   h += '<div class="panel"><h3>Por semana de débito</h3><div class="scrollx"><table class="tl"><thead><tr><th>Semana</th><th class="n">Echeqs</th>' + (ent !== "PM" ? '<th class="n">HC</th>' : '') + (ent !== "HC" ? '<th class="n">PM</th>' : '') + '<th class="n">Total</th><th class="n">Financiamiento</th><th style="width:28%"></th></tr></thead><tbody>' +
     W.filas.map(function(f){
-      return '<tr><td>' + (f.k === 14 ? "Después de la semana 13" : "Sem. " + f.k + (f.desde ? ' <span class="help" style="margin:0">' + dm(f.desde) + '–' + dm(f.hasta) + '</span>' : '')) + (f.k === 1 && f.venc ? '<div class="help" style="margin:0">incluye ' + MM(f.venc) + ' ya vencidos</div>' : '') + '</td><td class="num">' + f.n + '</td>' +
+      return '<tr><td><button class="enlace" style="margin-left:0" data-esem="' + f.k + '" data-esem-t="1" title="Ver los echeqs de esta semana">' + (f.k === 14 ? "Después de la semana 13" : "Sem. " + f.k) + '</button>' + (f.k !== 14 && f.desde ? ' <span class="help" style="margin:0">' + dm(f.desde) + '–' + dm(f.hasta) + '</span>' : '') + (f.k === 1 && f.venc ? '<div class="help" style="margin:0">incluye ' + MM(f.venc) + ' ya vencidos</div>' : '') + '</td><td class="num">' + f.n + '</td>' +
         (ent !== "PM" ? '<td class="num">' + mm(f.HC) + '</td>' : '') + (ent !== "HC" ? '<td class="num">' + mm(f.PM) + '</td>' : '') + '<td class="num"><b>' + mm(f.total) + '</b></td><td class="num">' + (f.fin ? mm(f.fin) : "") + '</td>' +
         '<td><div style="height:10px;border-radius:3px;background:var(--s1);width:' + Math.max(1, Math.round(f.total / W.max * 100)) + '%"></div></td></tr>';
     }).join("") +
@@ -1718,6 +1738,8 @@ $("vista").addEventListener("click", function(ev){
     revEstado();
   }
   else if (b.hasAttribute("data-efil")) { ech.filtro = b.getAttribute("data-efil"); pintar(); }
+  else if (b.hasAttribute("data-esem")) { ech.sem = +b.getAttribute("data-esem"); pintar(); if (b.hasAttribute("data-esem-t")) { var es = $("ech_semana"); if (es) es.scrollIntoView({behavior: "smooth", block: "start"}); } }
+  else if (b.hasAttribute("data-ech-sem")) { ech.sem = +b.getAttribute("data-ech-sem"); tab = "echeqs"; marcarTab(); store.set("gp_tab", tab); pintar(); window.scrollTo(0, 0); }
   else if (b.hasAttribute("data-emas")) { var km = b.getAttribute("data-emas"); ech.mas[km] = !ech.mas[km]; pintar(); }
   else if (b.id === "ech_xlsx") echDescargar();
   else if (b.hasAttribute("data-gent")) { ges.ent = b.getAttribute("data-gent"); pintar(); }
