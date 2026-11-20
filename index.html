@@ -261,6 +261,7 @@ ul.ents .cz{display:block;font-weight:400;font-size:11px;color:var(--ink-3);lett
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--accent-soft);border-radius:8px;padding:13px 15px 10px;box-shadow:var(--shadow)}
 .kpi.bad{border-top-color:var(--bad)}
+.kpi.warn{border-top-color:var(--warn)}
 .kpi .l{font-size:11px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;font-weight:500}
 .kpi .v{font-size:24px;font-weight:600;margin:3px 0 1px;letter-spacing:-.2px;color:var(--ink)}
 .kpi .v.bad{color:var(--bad)}
@@ -375,6 +376,7 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
     <button role="tab" data-tab="resumen" aria-selected="true">Resumen ejecutivo</button>
     <button role="tab" data-tab="semanas" aria-selected="false">Próximas 4 semanas</button>
     <button role="tab" data-tab="flujo" aria-selected="false">Flujo de caja trimestral</button>
+    <button role="tab" data-tab="echeqs" id="tab_echeqs" aria-selected="false" hidden>Echeqs</button>
     <button role="tab" data-tab="cobranzas" aria-selected="false">Cobranzas</button>
     <button role="tab" data-tab="ventas" aria-selected="false">Proyección de ventas</button>
     <button role="tab" data-tab="deuda" aria-selected="false">Deuda</button>
@@ -471,11 +473,11 @@ function encabezado(){
   if (!admin && pub.modo === "manual" && sello) $("stamp").innerHTML += '<br><b>' + sello + '</b>';
   if (admin) av.push(barraAdmin(pub, sello));
   if (!admin) (cal.avisos_publicos || []).forEach(function(a){ av.push('<div class="banner">' + esc(a) + '</div>'); });
-  $("tab_admin").hidden = !admin;
+  $("tab_admin").hidden = !admin; $("tab_echeqs").hidden = !admin;
   var cobr = pub.rol === "cobranzas", prod = pub.rol === "produccion";
   $("tab_gestion").hidden = !(admin || cobr); $("tab_gestion").style.order = cobr ? "-1" : "";
   $("tab_obras").hidden = !(admin || cobr || prod); $("tab_obras").style.order = prod ? "-1" : "";
-  document.querySelectorAll("nav.tabs button").forEach(function(b){ var k = b.getAttribute("data-tab"); if (k !== "gestion" && k !== "admin" && k !== "obras") b.hidden = prod || (cobr && k !== "ventas"); });
+  document.querySelectorAll("nav.tabs button").forEach(function(b){ var k = b.getAttribute("data-tab"); if (k !== "gestion" && k !== "admin" && k !== "obras" && k !== "echeqs") b.hidden = prod || (cobr && k !== "ventas"); });
   $("subtitulo").textContent = cobr ? "Panel del equipo de Cobranzas" : prod ? "Seguimiento de obras · Producción" : "Informe financiero · uso exclusivo de accionistas";
   if (cobr || prod) { document.title = D.titulo + (cobr ? " · Cobranzas" : " · Obras"); $("stamp").innerHTML = 'saldos al ' + dmy(m.fecha_saldos); av = []; }
   $("avisos").innerHTML = av.join("");
@@ -637,7 +639,7 @@ function tablaFlujo(L, n, F, pos0){
   var h = '<div class="legend"><span><span class="dot c"></span>Comprometido: ya registrado (facturas, cheques, planes)</span><span><span class="dot"></span>Estimado: ritmo real de pagos y cobranzas de los extractos, o calendario del informe</span></div><div class="scrollx"><table class="fl">' + cab + '<tbody>';
   h += '<tr class="ini"><td>Saldo bancario inicial (todos los bancos)</td><td class="num">' + par(pos0) + '</td>' + new Array(n + 1).join("<td></td>") + '</tr>';
   h += sec("Ingresos") + det("Cobranzas de clientes (cuentas a cobrar)", "cob_clientes", "c") + det("Echeqs de clientes en cartera", "cob_echeq", "c") + det("Cobranzas de ventas nuevas", "cob_nuevas", "") + sub("Total ingresos", "ingresos");
-  h += sec("Egresos operativos") + det("Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + det("Proveedores: transferencias y cuenta corriente", "pag_transf", "c") + det("Proveedores: ritmo estimado de pagos", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
+  h += sec("Egresos operativos") + det(D.meta.echeqs_registro ? "Echeqs emitidos, pendientes de débito" : "Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + det(D.meta.echeqs_registro ? "Proveedores: facturas a pagar (transferencia o echeq a emitir)" : "Proveedores: transferencias y cuenta corriente", "pag_transf", "c") + det("Proveedores: ritmo estimado de pagos", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
   h += sec("Egresos fiscales") + det("Impuestos y cargas sociales", "impuestos", "") + det("Planes de ARCA (regularización de cuotas)", "arca", "c") + sub("Total egresos fiscales", "fiscal");
   h += sec("Egresos financieros") + det("Cuotas de préstamos bancarios", "fin_prestamos", "c") + det("Echeqs propios descontados que vencen", "fin_echeqs", "c") + det("Intereses bancarios, comisiones y débitos", "financieros", "") + sub("Total egresos financieros", "financ");
   h += '<tr class="res"><td>Resultado de la semana</td>' + L.resultado.map(function(v){ return cel(v); }).join("") + cel(SUMA(L.resultado)) + '</tr>';
@@ -889,7 +891,12 @@ function gesTango(){
   if (T.cobradas_tango) h += '<p style="margin:0 0 10px"><b>' + T.cobradas_tango + (T.cobradas_tango === 1 ? ' factura' : ' facturas') + ' por ' + MM(T.importe_cobradas_tango) + '</b> ' + (T.cobradas_tango === 1 ? 'del archivo de cartera ya está cobrada' : 'del archivo de cartera ya están cobradas') +
     ' según Tango o el banco: salieron de la cartera abierta (las ves al final de la lista, en «Ya cobradas») y el flujo no las vuelve a contar.</p>';
   var B = P.bancos || {}, medidas = emps.map(function(e){ return NOMBRE[e]; }).join(" y "), solo = emps.length === 1 ? emps[0] : null;
-  var bco = function(m, k){ var b = B[m.mes]; return '<td class="num">' + (b ? MM(b[k]) + (b.completo ? '' : '<small style="display:block;color:var(--ink-3)">en curso</small>') : '—') + '</td>'; };
+  var bco = function(m, k){
+    var b = B[m.mes]; if (!b) return '<td class="num">—</td>';
+    var hu = b.huecos || {}, vistos = {}, lista = (k === "total" ? [].concat(hu.HC || [], hu.PM || []) : (hu[k] || [])).filter(function(x){ var c = x.desde + x.hasta; if (vistos[c]) return false; vistos[c] = 1; return true; });
+    var aviso = lista.length ? '<small style="display:block;max-width:150px;margin-left:auto;white-space:normal;color:var(--warn)" title="' + esc(lista.map(function(x){ return x.cuenta + ': faltan movimientos entre el ' + dm(x.desde) + ' y el ' + dm(x.hasta); }).join(" · ")) + '">faltan días de extracto (' + lista.map(function(x){ return dm(x.desde) + " al " + dm(x.hasta); }).join(", ") + ')</small>' : '';
+    return '<td class="num">' + MM(b[k]) + (b.completo ? '' : '<small style="display:block;color:var(--ink-3)">en curso</small>') + aviso + '</td>';
+  };
   if (K && K.meses && K.meses.length) h += '<div class="scrollx"><table class="ges" style="margin-bottom:6px"><thead><tr><th>Cobrado en</th>' + K.meses.map(function(m){ return '<th class="n">' + MES_CORTO(m.mes) + '</th>'; }).join("") + '</tr></thead><tbody>' +
     '<tr><td>Días de emisión a cobro</td>' + K.meses.map(function(m){ return '<td class="num"><b>' + Math.round(m.dias) + '</b></td>'; }).join("") + '</tr>' +
     '<tr><td>Facturas medidas</td>' + K.meses.map(function(m){ return '<td class="num">' + m.n + '</td>'; }).join("") + '</tr>' +
@@ -898,7 +905,8 @@ function gesTango(){
     '<tr class="tot"><td>Entró a los bancos<small style="display:block;font-weight:400;color:var(--ink-3)">todo el grupo</small></td>' + K.meses.map(function(m){ return bco(m, "total"); }).join("") + '</tr></tbody></table></div>' +
     '<div class="help" style="margin-bottom:12px">El importe medido no es todo lo cobrado: son las facturas que sirven para medir el plazo (las de los reportes de Tango cargados, con fecha de emisión y de cobro, sin lo facturado entre empresas del grupo ni los cobros a cuenta anteriores a la factura). ' +
     'Lo que entró a los bancos son las transferencias y cobranzas de clientes de los extractos, más los echeqs de clientes entregados a proveedores' + (Object.keys(B).length ? '' : ' (todavía no está en este informe)') + '. ' +
-    'En un mes, Tango puede dar más que el banco: los echeqs se cuentan cuando se reciben y las retenciones son parte del recibo, pero no entran al banco.</div>';
+    'En un mes, Tango puede dar más que el banco: los echeqs se cuentan cuando se reciben y las retenciones son parte del recibo, pero no entran al banco. ' +
+    'Si un mes dice «faltan días de extracto», a la cuenta de CMF le faltan movimientos en ese tramo (no se bajó el diario de esos días) y lo que entró a los bancos es un piso: se completa al subir ese extracto.</div>';
   var filas = [];
   emps.forEach(function(e){ [["aesa", "A-Evangelista"], ["resto", "Resto de los clientes"]].forEach(function(c){ var r = (R[e] || {})[c[0]]; if (!r) return;
     filas.push('<tr><td>' + NOMBRE[e] + ' · ' + c[1] + '</td><td class="num"><b>' + Math.round(r.dias) + ' días</b></td><td class="num">' + r.n + '</td><td class="num">' + MM(r.importe) + '</td></tr>'); });
@@ -1564,6 +1572,124 @@ function vistaObras(){
   $("vista").innerHTML = h;
   obrEnlazar();
 }
+/* ---------- Echeqs emitidos pendientes de débito (solo administración) ---------- */
+var ech = {filtro: "todos", mas: {}};
+function echDiasEntre(a, b){ return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5); }
+function echSituacion(x){
+  if (x.dudoso) return '<span class="etq warn" title="' + esc(x.situacion) + '">Dudoso</span>';
+  if (x.vencido) return '<span class="etq bad" title="El banco todavía no lo debitó">Vencido ' + x.dias_vencido + ' d</span>';
+  if (x.fecha_cheque === D.echeqs.hoy) return '<span class="etq warn">Vence hoy</span>';
+  return '<span class="etq gris">A vencer</span>';
+}
+function echMotivo(m){ return /^d[ée]bito/i.test(m || "") ? "Débito del banco" : (m || ""); }
+function echSinProv(x){ return x.tipo === "Proveedores" && (!x.proveedor || /sin proveedor/i.test(x.proveedor)); }
+function echProveedores(xs){
+  var m = {}, out = [];
+  xs.forEach(function(x){
+    if (x.tipo !== "Proveedores") return;
+    var k = x.proveedor || "(sin proveedor asignado)", d = m[k] || (m[k] = {nombre: k, n: 0, imp: 0, venc: 0, prox: null});
+    d.n++; d.imp += x.importe; if (x.vencido) d.venc += x.importe; if (!d.prox || x.fecha_flujo < d.prox) d.prox = x.fecha_flujo;
+  });
+  Object.keys(m).forEach(function(k){ out.push(m[k]); });
+  return out.sort(function(a, b){ return b.imp - a.imp; });
+}
+function echSemanas(L, xs){
+  var tot = 0, max = 0, filas = [];
+  for (var k = 1; k <= 14; k++) {
+    var s = xs.filter(function(x){ return x.semana === k; }), w = L.por_semana[k - 1] || {};
+    var f = {k: k, desde: w.desde, hasta: w.hasta, n: s.length, HC: SUMA(s.filter(function(x){ return x.emp === "HC"; }).map(function(x){ return x.importe; })), PM: SUMA(s.filter(function(x){ return x.emp === "PM"; }).map(function(x){ return x.importe; })),
+             fin: SUMA(s.filter(function(x){ return x.tipo !== "Proveedores"; }).map(function(x){ return x.importe; })), venc: SUMA(s.filter(function(x){ return x.vencido; }).map(function(x){ return x.importe; }))};
+    f.total = f.HC + f.PM; max = Math.max(max, f.total); tot += f.total; if (s.length) filas.push(f);
+  }
+  return {filas: filas, max: max || 1, total: tot};
+}
+function echDescargar(){
+  var b = $("ech_xlsx"); if (!b || b.disabled) return;
+  var t = store.get("gp_token"), rot = b.textContent, h = D.echeqs.hoy || "";
+  b.disabled = true; b.textContent = "Preparando el Excel…";
+  fetch(API + "/api/v1/portal/echeqs.xlsx", {headers: {Authorization: "Bearer " + t}}).then(function(r){
+    if (!r.ok) return r.json().then(function(j){ throw new Error(j.detail || "No se pudo armar el Excel."); });
+    return r.blob().then(function(blob){
+      var url = URL.createObjectURL(blob), a = document.createElement("a");
+      a.href = url; a.download = "Echeqs_pendientes_acumulados_" + h.slice(8, 10) + "-" + h.slice(5, 7) + "-" + h.slice(0, 4) + ".xlsx";
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
+    });
+  }).catch(function(e){ alert(e.message || "No se pudo descargar el Excel."); }).then(function(){ b.disabled = false; b.textContent = rot; });
+}
+function echControles(L, xs){
+  var h = '<div class="panel"><h3>Controles: qué dato falta o conviene mirar</h3>', o = L.origen || {}, reg = o.registro || {};
+  var tr = [];
+  Object.keys(L.tramos_sin_extracto || {}).forEach(function(e){ (L.tramos_sin_extracto[e] || []).forEach(function(t){ tr.push({emp: e, t: t}); }); });
+  h += '<h4 style="margin:6px 0">1. Días sin extracto del banco</h4>';
+  if (tr.length) {
+    var dud = L.pendientes.filter(function(x){ return x.dudoso; });
+    h += '<ul class="mirar">' + tr.map(function(z){ return '<li class="w"><b>' + z.emp + ' · ' + esc(z.t.cuenta) + '</b>No hay movimientos entre el ' + dmy(z.t.desde) + ' y el ' + dmy(z.t.hasta) + ' (el saldo no empalma; faltan ' + MM(Math.abs(z.t.dif || 0)) + ' netos de movimientos).</li>'; }).join("") + '</ul>' +
+      '<div class="help">Los ' + dud.length + ' echeqs dudosos (' + MM(SUMA(dud.map(function(x){ return x.importe; }))) + ') son los vencidos que pudieron debitarse en esos días. Bajá esos extractos a la carpeta de entrada y FINETIA los saca de la lista solo; si ya sabés que se pagaron, anotalos en <b>echeqs_baja</b> de ajustes_flujo.json (por ejemplo "HC-70419028").</div>';
+  } else h += '<div class="help" style="margin-top:0">Los extractos de CMF cubren todos los días hasta hoy.</div>';
+  var sp = xs.filter(echSinProv);
+  h += '<h4 style="margin:14px 0 6px">2. Echeqs sin proveedor asignado en Tango</h4>' + (sp.length ?
+    '<div class="help" style="margin-top:0">' + sp.length + ' echeqs por ' + MM(SUMA(sp.map(function(x){ return x.importe; }))) + ' no tienen proveedor en Tango (no se sabe a quién se le paga). Se cuentan como pagos a proveedores; conviene que Tesorería los asigne.</div>' :
+    '<div class="help" style="margin-top:0">Todos los echeqs tienen proveedor asignado.</div>');
+  var nu = L.numeracion || [];
+  h += '<h4 style="margin:14px 0 6px">3. Numeración de las chequeras</h4>' + (nu.length ?
+    '<ul class="mirar">' + nu.map(function(z){ return '<li><b>' + z[0] + ' · ' + esc(z[1]) + '</b>Sin rastro en Tango: ' + z[2].join(", ") + '</li>'; }).join("") + '</ul><div class="help">Suelen ser echeqs anulados o números salteados. Si alguno fuera un echeq emitido, no está en la lista: hay que mirarlo en Tango o en el portal del banco.</div>' :
+    '<div class="help" style="margin-top:0">No hay números salteados en las series de chequeras.</div>');
+  var dias = o.tango_hasta ? echDiasEntre(o.tango_hasta, L.hoy) : null;
+  h += '<h4 style="margin:14px 0 6px">4. De dónde salen los datos</h4><div class="help" style="margin-top:0">Archivos de Tango «Consulta de cheques propios» hasta el <b>' + (o.tango_hasta ? dmy(o.tango_hasta) : "s/d") + '</b>' + (dias !== null && dias > 3 ? ' <b class="neg">(hace ' + dias + ' días: lo emitido después no está en la lista)</b>' : '') +
+    '. Extractos del banco (CMF) hasta el <b>' + (o.extractos_hasta ? dmy(o.extractos_hasta) : "s/d") + '</b>. Registro acumulado: ' + NUMU((reg.pendiente || 0) + (reg.debitado || 0) + (reg.baja || 0)) + ' echeqs (' + NUMU(reg.pendiente || 0) + ' pendientes, ' + NUMU(reg.debitado || 0) + ' debitados, ' + NUMU(reg.baja || 0) + ' dados de baja). Un echeq entra cuando aparece en un archivo de Tango y sale cuando el extracto del banco muestra «Pago de Echeq» con su número.</div>';
+  return h + '</div>';
+}
+function vistaEcheqs(){
+  var L = D.echeqs, cab = '<div class="ges-cab"><div style="flex:1 1 340px"><h2>Echeqs emitidos pendientes de débito</h2><div class="help" style="margin:0">Todos los echeqs propios que se emitieron y el banco todavía no debitó, acumulados de los archivos de Tango. Es lo que el flujo toma como «Echeqs emitidos» y se parece a la pestaña «Echeqs Pendientes» del Informe Financiero.</div></div>' +
+    '<div class="acc">' + (L && L.pendientes && L.pendientes.length ? '<button class="btn" id="ech_xlsx">Descargar Excel</button>' : '') + '</div></div>';
+  if (!L || L.error) {
+    $("vista").innerHTML = '<div class="panel">' + cab + (L && L.error ? '<div class="banner bad">' + esc(L.error) + '</div>' : '<div class="help">El listado de echeqs se arma con la próxima actualización (todos los días hábiles a las 11:00, o con «Actualizar ahora»).</div>') + '</div>';
+    return;
+  }
+  var xs = L.pendientes.filter(function(x){ return ent === "GRUPO" || x.emp === ent; });
+  var imp = function(a){ return SUMA(a.map(function(x){ return x.importe; })); }, venc = xs.filter(function(x){ return x.vencido; }), dud = xs.filter(function(x){ return x.dudoso; });
+  var prov = xs.filter(function(x){ return x.tipo === "Proveedores"; }), fin = xs.filter(function(x){ return x.tipo !== "Proveedores"; }), s1 = xs.filter(function(x){ return x.semana === 1; });
+  var o = L.origen || {}, dias = o.tango_hasta ? echDiasEntre(o.tango_hasta, L.hoy) : null;
+  var h = '<div class="panel">' + cab + '<div style="margin:10px 0">' + selector() + '</div>';
+  if (dias !== null && dias > 3) h += '<div class="banner bad">Los archivos de Tango llegan hasta el ' + dmy(o.tango_hasta) + ' (hace ' + dias + ' días): los echeqs emitidos después no están en la lista. Hay que bajar «Consulta de cheques propios» de HC y PM.</div>';
+  if (dud.length) h += '<div class="banner">Hay ' + dud.length + ' echeqs vencidos por ' + MM(imp(dud)) + ' en días en que falta el extracto del banco: pueden estar ya debitados. Se cuentan como pendientes hasta que se baje el extracto (ver «Controles»).</div>';
+  h += '<div class="kpis">' +
+    kpi("Pendientes de débito", MM(imp(xs)), xs.length + " echeqs · " + MM(imp(prov)) + " a proveedores" + (fin.length ? " · " + MM(imp(fin)) + " financiamiento Acindar" : ""), "") +
+    kpi("Vencidos sin debitar", MM(imp(venc)), venc.length + " echeqs con fecha anterior a hoy · caen en la semana 1", venc.length ? "warn" : "") +
+    kpi("Dudosos por falta de extracto", MM(imp(dud)), dud.length ? dud.length + " echeqs vencidos en días sin extracto del banco" : "ninguno: el banco cubre todos los días", dud.length ? "warn" : "") +
+    kpi("Semana 1 del flujo", MM(imp(s1)), s1.length + " echeqs: los vencidos más lo que vence esta semana", "") + '</div></div>';
+  // por semana de débito
+  var W = echSemanas(L, xs);
+  h += '<div class="panel"><h3>Por semana de débito</h3><div class="scrollx"><table class="tl"><thead><tr><th>Semana</th><th class="n">Echeqs</th>' + (ent !== "PM" ? '<th class="n">HC</th>' : '') + (ent !== "HC" ? '<th class="n">PM</th>' : '') + '<th class="n">Total</th><th class="n">Financiamiento</th><th style="width:28%"></th></tr></thead><tbody>' +
+    W.filas.map(function(f){
+      return '<tr><td>' + (f.k === 14 ? "Después de la semana 13" : "Sem. " + f.k + (f.desde ? ' <span class="help" style="margin:0">' + dm(f.desde) + '–' + dm(f.hasta) + '</span>' : '')) + (f.k === 1 && f.venc ? '<div class="help" style="margin:0">incluye ' + MM(f.venc) + ' ya vencidos</div>' : '') + '</td><td class="num">' + f.n + '</td>' +
+        (ent !== "PM" ? '<td class="num">' + mm(f.HC) + '</td>' : '') + (ent !== "HC" ? '<td class="num">' + mm(f.PM) + '</td>' : '') + '<td class="num"><b>' + mm(f.total) + '</b></td><td class="num">' + (f.fin ? mm(f.fin) : "") + '</td>' +
+        '<td><div style="height:10px;border-radius:3px;background:var(--s1);width:' + Math.max(1, Math.round(f.total / W.max * 100)) + '%"></div></td></tr>';
+    }).join("") +
+    '<tr class="tot"><td>Total</td><td class="num">' + xs.length + '</td>' + (ent !== "PM" ? '<td class="num">' + mm(imp(xs.filter(function(x){ return x.emp === "HC"; }))) + '</td>' : '') + (ent !== "HC" ? '<td class="num">' + mm(imp(xs.filter(function(x){ return x.emp === "PM"; }))) + '</td>' : '') + '<td class="num">' + mm(W.total) + '</td><td class="num">' + (fin.length ? mm(imp(fin)) : "") + '</td><td></td></tr></tbody></table></div>' +
+    '<div class="help">Millones de pesos. La semana de débito es el primer día hábil desde la fecha del cheque, y nunca antes del lunes de esta semana: un echeq vencido que el banco no debitó figura el lunes. Financiamiento = echeqs de $ 25 M emitidos a «SIN PROVEEDOR» (deuda con Acindar), que el flujo trata como deuda financiera y no como pago a proveedores.</div></div>';
+  // por proveedor
+  var P = echProveedores(xs), verP = ech.mas.prov ? P : P.slice(0, 12);
+  h += '<div class="panel"><h3>Por proveedor</h3><div class="scrollx"><table class="tl ges"><thead><tr><th>Proveedor</th><th class="n">Echeqs</th><th class="n">Importe</th><th class="n">Ya vencido</th><th>Primer débito</th></tr></thead><tbody>' +
+    verP.map(function(d){ return '<tr><td>' + (d.nombre.charAt(0) === "(" ? '<i>' + esc(d.nombre) + '</i>' : esc(d.nombre)) + '</td><td class="num">' + d.n + '</td><td class="num">' + NF2(d.imp) + '</td><td class="num' + (d.venc ? " neg" : "") + '">' + (d.venc ? NF2(d.venc) : "") + '</td><td>' + dmy(d.prox) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+    (P.length > 12 ? '<button class="enlace" data-emas="prov">' + (ech.mas.prov ? "Ver menos" : "Ver los " + P.length + " proveedores") + '</button>' : "") + '</div>';
+  // lista de pendientes
+  var fil = {todos: "Todos", vencidos: "Vencidos", dudosos: "Dudosos", avencer: "A vencer"}, lista = xs.filter(function(x){ return ech.filtro === "todos" || (ech.filtro === "vencidos" && x.vencido) || (ech.filtro === "dudosos" && x.dudoso) || (ech.filtro === "avencer" && !x.vencido); });
+  h += '<div class="panel"><h3>Echeqs pendientes, uno por uno</h3><div class="ges-filtros"><div class="seg" role="group" aria-label="Filtro">' + Object.keys(fil).map(function(k){ return '<button data-efil="' + k + '" aria-pressed="' + (ech.filtro === k) + '">' + fil[k] + '</button>'; }).join("") + '</div><span class="help" style="margin:0">' + lista.length + ' echeqs · ' + MM(imp(lista)) + '</span></div>' +
+    '<div class="scrollx"><table class="tl ges"><thead><tr><th>Emp.</th><th>N.º de echeq</th><th>Proveedor</th><th>Emisión</th><th>Fecha del cheque</th><th>Débito esperado</th><th class="n">Sem.</th><th class="n">Importe</th><th>Situación</th></tr></thead><tbody>' +
+    lista.map(function(x){ return '<tr' + (x.dudoso ? ' style="background:var(--warn-bg)"' : '') + '><td>' + x.emp + '</td><td>' + esc(x.nro) + '</td><td>' + (x.proveedor ? esc(x.proveedor) : '<i>(sin proveedor asignado)</i>') + (x.tipo !== "Proveedores" ? ' <span class="etq gris">Financiamiento</span>' : '') + '</td><td>' + dmy(x.emision) + '</td><td>' + dmy(x.fecha_cheque) + '</td><td>' + dmy(x.fecha_flujo) + '</td><td class="num">' + (x.semana === 14 ? "+" : x.semana) + '</td><td class="num">' + NF2(x.importe) + '</td><td>' + echSituacion(x) + '</td></tr>'; }).join("") +
+    (lista.length ? '' : '<tr><td colspan="9"><i>No hay echeqs con este filtro.</i></td></tr>') + '</tbody></table></div>' +
+    '<div class="help">Débito esperado = el día en que el flujo los pone. «Dudoso» = vencido en un tramo sin extracto del banco. La fecha del cheque y la emisión salen de Tango.</div></div>';
+  // debitados
+  var db = L.debitados.filter(function(x){ return ent === "GRUPO" || x.emp === ent; }), verD = ech.mas.deb ? db : db.slice(0, 15);
+  h += '<div class="panel"><h3>Ya debitados en los últimos 30 días</h3>' + (db.length ? '<div class="scrollx"><table class="tl ges"><thead><tr><th>Emp.</th><th>N.º de echeq</th><th>Proveedor</th><th>Fecha del cheque</th><th>Salió de la lista</th><th class="n">Importe en Tango</th><th class="n">Importe en el banco</th><th>Motivo</th></tr></thead><tbody>' +
+    verD.map(function(x){ return '<tr><td>' + x.emp + '</td><td>' + esc(x.nro) + '</td><td style="white-space:normal;max-width:250px">' + (x.proveedor ? esc(x.proveedor) : '<i>(sin proveedor asignado)</i>') + '</td><td>' + dmy(x.fecha_cheque) + '</td><td>' + dmy(x.fecha_baja) + '</td><td class="num">' + NF2(x.importe) + '</td><td class="num">' + (x.importe_banco != null ? NF2(x.importe_banco) : "") + (x.monto_distinto ? ' <span class="etq warn">monto distinto</span>' : "") + '</td><td>' + esc(echMotivo(x.motivo)) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+    (db.length > 15 ? '<button class="enlace" data-emas="deb">' + (ech.mas.deb ? "Ver menos" : "Ver los " + db.length + " debitados") + '</button>' : "") : '<div class="help" style="margin-top:0">Todavía no hay débitos registrados.</div>') +
+    '<div class="help">Se identifican por número de echeq en los extractos del banco (CMF). Si el banco debitó un importe distinto del de Tango, figura con «monto distinto»: conviene revisar con Tesorería.</div></div>';
+  h += echControles(L, xs);
+  $("vista").innerHTML = h;
+}
 function pintar(){
   if (!D) return;
   var rolAct = (D.publicacion || {}).rol;
@@ -1571,8 +1697,9 @@ function pintar(){
   if (rolAct === "produccion" && tab !== "obras") { tab = "obras"; marcarTab(); }
   if (tab === "obras" && rolAct !== "admin" && rolAct !== "cobranzas" && rolAct !== "produccion") { tab = "resumen"; marcarTab(); }
   if (tab === "gestion" && rolAct !== "admin" && rolAct !== "cobranzas") { tab = "resumen"; marcarTab(); }
+  if (tab === "echeqs" && rolAct !== "admin") { tab = "resumen"; marcarTab(); }
   encabezado(); configurarChat();
-  if (tab === "gestion") vistaGestion(); else if (tab === "obras") vistaObras(); else if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "garantias") vistaGarantias(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
+  if (tab === "gestion") vistaGestion(); else if (tab === "echeqs") vistaEcheqs(); else if (tab === "obras") vistaObras(); else if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "garantias") vistaGarantias(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
   $("pie").textContent = rolAct === "produccion" ? "FINETIA · Seguimiento de obras · Cifras en pesos con IVA salvo que se indique; “M” = millones." : rolAct === "cobranzas" ? "FINETIA · Panel del equipo de Cobranzas · Lo que guardás entra al flujo en el momento." : "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
 }
 function marcarTab(){ document.querySelectorAll("nav.tabs button").forEach(function(x){ x.setAttribute("aria-selected", x.getAttribute("data-tab") === tab); }); }
@@ -1590,6 +1717,9 @@ $("vista").addEventListener("click", function(ev){
     b.parentNode.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", String(x.getAttribute("data-dec") === a.decision)); });
     revEstado();
   }
+  else if (b.hasAttribute("data-efil")) { ech.filtro = b.getAttribute("data-efil"); pintar(); }
+  else if (b.hasAttribute("data-emas")) { var km = b.getAttribute("data-emas"); ech.mas[km] = !ech.mas[km]; pintar(); }
+  else if (b.id === "ech_xlsx") echDescargar();
   else if (b.hasAttribute("data-gent")) { ges.ent = b.getAttribute("data-gent"); pintar(); }
   else if (b.hasAttribute("data-gfil")) { ges.filtro = b.getAttribute("data-gfil"); pintar(); }
   else if (b.hasAttribute("data-informe")) informeController(+b.getAttribute("data-informe")).catch(function(e){ alert(e.message); });
