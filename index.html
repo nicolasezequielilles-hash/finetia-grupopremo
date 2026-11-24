@@ -229,6 +229,9 @@ ul.ents .cz{display:block;font-weight:400;font-size:11px;color:var(--ink-3);lett
 @keyframes iap{0%,100%{opacity:.25}50%{opacity:1}}
 @media (max-width:600px){#ia_panel{right:0;bottom:0;width:100vw;max-width:100vw;height:82vh;border-radius:14px 14px 0 0}#ia_fab{right:12px;bottom:12px}}
 .banner.bad{border-left-color:var(--bad);background:var(--bad-bg)}
+.banner.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.ccl{font-size:12.5px;color:var(--ink-2);margin:-2px 0 12px;line-height:1.5}
+.ccl b{color:var(--ink)}
 .barra{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:16px;justify-content:space-between}
 .seg{display:inline-flex;border:1px solid var(--line-2);border-radius:6px;overflow:hidden;background:var(--surface)}
 .seg button{background:transparent;border:0;padding:8px 16px;cursor:pointer;color:var(--ink-2);font-weight:500}
@@ -1126,6 +1129,28 @@ function panelCosto(){
 }
 var EST_GAR = {usada: ["Usada por completo", ""], parcial: ["Con disponibilidad", "ok"], libre: ["Libre", "ok"]};
 function usd(v){ return "US$ " + NF0.format(Math.round(v || 0)); }
+/* dólar CCL con el que se valúan las garantías: valor, cuál es (compra), de dónde sale y a qué hora; si no es el de hoy, un aviso ámbar */
+function lineaCCL(G){
+  var T = G.tc;
+  if (!T) return "";                                                   // informe anterior a la actualización automática del dólar: se ve como antes
+  var admin = D.publicacion && D.publicacion.rol === "admin", est = T.estado, v = T.valor ? "$" + NF2(T.valor) : "",
+      fuente = T.fuente ? (admin ? T.fuente : T.fuente.replace(/\s*\(.*\)\s*$/, "")) : "",
+      hora = T.fecha_cotizacion_txt ? "cotización del " + T.fecha_cotizacion_txt : "",
+      venta = admin && T.campo === "compra" && T.venta ? " · venta $" + NF2(T.venta) : "",
+      dif = admin && est !== "planilla" && T.tc_planilla && T.dif_planilla_pct !== null && T.dif_planilla_pct !== undefined ?
+            " · " + (T.dif_planilla_pct < 0 ? "−" : "+") + NF1.format(Math.abs(T.dif_planilla_pct)) + " % contra la planilla ($" + NF2(T.tc_planilla) + ")" : "",
+      h = "", av = [];
+  if (v && (est === "online" || est === "guardado"))
+    h = '<div class="ccl"><b>Dólar CCL ' + esc(v) + '</b> · ' + esc(T.campo || "compra") + (fuente ? ' · ' + esc(fuente) : '') + (hora ? ' · ' + esc(hora) : '') + esc(venta) + esc(dif) + '</div>';
+  else if (v && est === "planilla")
+    h = '<div class="ccl"><b>Dólar CCL ' + esc(v) + '</b> · tomado de la planilla de Pasivos (carga manual)' + (T.automatico === false ? ' · actualización automática apagada' : '') + '</div>';
+  if (est === "guardado") av.push("Hoy no se pudo actualizar el dólar CCL: se usa el último valor guardado" + (hora ? " (" + hora + ")" : "") + ".");
+  else if (est === "planilla" && T.automatico !== false) av.push("Hoy no se pudo actualizar el dólar CCL: se usa el valor de la planilla de Pasivos.");
+  else if (est === "sin_dato") av.push("No hay dólar CCL (no se pudo consultar y la planilla no lo tiene): las garantías no se pueden expresar en pesos.");
+  if (T.cotizacion_vieja) av.push("La cotización del dólar CCL es del " + (T.fecha_cotizacion_txt || "fecha desconocida") + (T.antiguedad_horas ? " (hace " + Math.floor(T.antiguedad_horas / 24) + " días)" : "") + ": puede estar desactualizada.");
+  if (av.length) h += '<div class="banner warn" style="margin:0 0 10px">' + av.map(esc).join(" ") + (admin && (T.motivo || T.ayuda) ? '<div class="help" style="margin:6px 0 0">' + (T.motivo ? 'Motivo: ' + esc(T.motivo) + '. ' : '') + esc(T.ayuda || "") + '</div>' : '') + '</div>';
+  return h;
+}
 function panelGarantias(){
   var G = D.garantias;
   if (!G) return '<div class="panel"><h3>Garantías</h3><div class="help">' + ((D.publicacion && D.publicacion.rol === "admin") ?
@@ -1135,10 +1160,10 @@ function panelGarantias(){
       sinContar = [G.usada_caucion_usd ? usd(G.usada_caucion_usd) + " que respaldan cauciones" : "", G.usada_echeqs_usd ? usd(G.usada_echeqs_usd) + " que respaldan el financiamiento de Acindar" : ""].filter(Boolean).join(" y ");
   var dv = G.proximo_vto ? Math.max(0, Math.round((new Date(G.proximo_vto + "T00:00:00") - new Date(hoy + "T00:00:00")) / 864e5)) : null, venc = G.proximo_vto ? dmy(G.proximo_vto) : "—";
   var h = '<div class="panel"><h3>Garantías · activos en dólares que respaldan operaciones financieras</h3><div class="kpis">' +
-    kpi("Garantías totales", usd(G.total_usd), G.tipo_cambio ? "≈ " + MM(G.total_pesos) + " a $" + NF0.format(G.tipo_cambio) + " por dólar CCL" : "sin dólar CCL cargado", "") +
+    kpi("Garantías totales", usd(G.total_usd), G.tipo_cambio ? "≈ " + MM(G.total_pesos) + " a $" + NF0.format(G.tipo_cambio) + " por dólar CCL" : (G.tc && G.tc.estado === "sin_dato" ? "sin dólar CCL (no se pudo consultar)" : "sin dólar CCL cargado"), "") +
     kpi("Usadas por completo", usd(G.usada_usd), pct(G.usada_usd / (G.total_usd || 1)) + " del total" + (G.usada_caucion_usd ? " · " + usd(G.usada_caucion_usd) + " respaldan cauciones" : "") + (G.usada_echeqs_usd ? " · " + usd(G.usada_echeqs_usd) + " respaldan a Acindar" : ""), "") +
     kpi("Con disponibilidad", usd(disp), disp ? "sin tomar, según el último extracto de cada custodio" : "toda la garantía está tomada", disp ? "" : "warn") +
-    kpi("Próximo vencimiento", venc, (dv !== null ? "en " + dv + " días · " : "") + (G.titulos_usd ? "títulos " + usd(G.titulos_usd) + " · efectivo " + usd(G.efectivo_usd) : ""), dv !== null && dv <= 60 ? "warn" : "") + '</div>';
+    kpi("Próximo vencimiento", venc, (dv !== null ? "en " + dv + " días · " : "") + (G.titulos_usd ? "títulos " + usd(G.titulos_usd) + " · efectivo " + usd(G.efectivo_usd) : ""), dv !== null && dv <= 60 ? "warn" : "") + '</div>' + lineaCCL(G);
   if (C) {
     h += '<div class="help" style="margin:0 0 10px"><b>Cobertura.</b> El acuerdo de Hormigones Cardales (' + MM(C.acuerdo_eecc) + ') se respalda con el balance (EECC); el resto, ' + MM(C.acuerdo_respaldado) + ', con estas garantías. ' +
       (C.veces_tomada ? 'Valuadas al dólar CCL, las garantías usadas para acuerdos bancarios valen ' + MM(C.garantia_tomada_pesos) + (sinContar ? ' (sin contar ' + sinContar + ')' : '') + ': <b>' + NF2(C.veces_tomada) + ' veces</b> el acuerdo' + (C.veces_utilizado ? ' y <b>' + NF2(C.veces_utilizado) + ' veces</b> lo que hoy se usa de ese descubierto (' + MM(C.utilizado_respaldado) + ')' : '') + (C.veces_total ? '; sumando lo que tiene disponibilidad, ' + NF2(C.veces_total) + ' veces el acuerdo' : '') + '. ' : '') +
@@ -1162,7 +1187,7 @@ function panelGarantias(){
   });
   h += '<div class="scrollx"><table class="tl"><thead><tr><th>Custodio / instrumento</th><th class="n">Vence</th><th class="n">Días</th><th class="n">Valor nominal</th><th class="n">Valor de mercado</th><th class="n">Resultado US$</th><th>Estado</th></tr></thead><tbody>' + filas +
     '<tr class="tot"><td colspan="4">Total</td><td class="num"><b>' + usd(G.total_usd) + '</b></td><td></td><td></td></tr></tbody></table></div>' +
-    '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías), valuados como dólar CCL: los dólares MEP se muestran netos del canje a CCL. "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo. Lo que respalda cauciones o el financiamiento con echeqs de Acindar cuenta como usado, pero no como cobertura del acuerdo bancario.</div></div>';
+    '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías), valuados como dólar CCL: los dólares MEP se muestran netos del canje a CCL. El dólar CCL se actualiza solo en cada corrida (cotización de compra de Ámbito Financiero, vía DolarApi.com); si no se puede consultar, se usa el último valor guardado y, si no hay, el de la planilla de Pasivos. "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo. Lo que respalda cauciones o el financiamiento con echeqs de Acindar cuenta como usado, pero no como cobertura del acuerdo bancario.</div></div>';
   return h;
 }
 function vistaGarantias(){ $("vista").innerHTML = panelGarantias(); }
