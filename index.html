@@ -296,6 +296,8 @@ ul.ents .cz{display:block;font-weight:400;font-size:11px;color:var(--ink-3);lett
 .comp .nm{flex:1;min-width:0;color:var(--ink-2)}
 .comp b{font-weight:600}
 .comp .cp{width:34px;text-align:right;color:var(--ink-3);font-size:12px}
+.comp .sub{font-size:11px;color:var(--ink-3);margin-top:3px;line-height:1.35}
+.comp.lg .cn{flex-wrap:wrap;row-gap:1px}.comp.lg .nm{flex:1 0 100%}.comp.lg .cp{margin-left:auto}
 .pista{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:4px}
 .pista>div{height:100%;border-radius:0 4px 4px 0}
 @media (max-width:980px){.deu-fam{grid-template-columns:repeat(3,minmax(0,1fr))}.deu-fam .fin{grid-column:1/-1}}
@@ -1193,19 +1195,25 @@ function panelGarantias(){
 function vistaGarantias(){ $("vista").innerHTML = panelGarantias(); }
 
 /* ---------- deuda: el total, cómo se reparte por tipo de deuda y la composición de cada bloque ---------- */
-function deudaBloques(R, S){
-  var G = R.GRUPO, tot = G.total || 1, sh = function(v){ return pct(v / tot); };
+function provTipos(P){              // «Proveedores» abierto en deuda con proveedores (facturas a pagar) y echeqs emitidos; null si el informe es anterior a esta apertura
+  var pe = P && P.por_empresa;
+  if (!pe || !pe.HC || !pe.PM || !pe.HC.por_tipo || !pe.PM.por_tipo) return null;
+  var s = function(t){ return ((pe.HC.por_tipo[t] || {}).importe || 0) + ((pe.PM.por_tipo[t] || {}).importe || 0); };
+  return {facturas: s("facturas"), echeqs: s("echeqs")};
+}
+function deudaBloques(R, S, P){
+  var G = R.GRUPO, tot = G.total || 1, sh = function(v){ return pct(v / tot); }, tp = provTipos(P);
   var inst = ["descubierto", "cauciones", "echeqs", "prestamos"].map(function(k, o){ return {nombre: ETQ[CLV.indexOf(k)], v: G[k] || 0, o: o}; })
     .sort(function(a, b){ return (b.v - a.v) || (a.o - b.o); });
   var fam = [
     {id: "fin", nombre: "Deuda financiera", cap: "Por instrumento · 100% = deuda financiera", v: inst.reduce(function(t, x){ return t + x.v; }, 0), col: "var(--f1)", nota: "descubierto, cauciones, echeqs y préstamos"},
     {id: "arca", nombre: "Planes de ARCA", cap: "Por empresa · 100% = ARCA", v: G.arca || 0, col: "var(--f2)", nota: "deuda fiscal", k: "arca"},
-    {id: "prov", nombre: "Proveedores", cap: "Por empresa · 100% = proveedores", v: G.proveedores || 0, col: "var(--f3)", nota: "deuda comercial", k: "proveedores"},
+    {id: "prov", nombre: "Proveedores", cap: tp ? "Por tipo · 100% = proveedores" : "Por empresa · 100% = proveedores", v: G.proveedores || 0, col: "var(--f3)", nota: "deuda comercial", k: "proveedores"},
     {id: "otr", nombre: "Otros pasivos", cap: "", v: G.otros || 0, col: "var(--f4)", nota: "", k: "otros"}
   ];
   var partes = fam.filter(function(f){ return f.v > 0; });
-  var fila = function(nombre, v, base, col, titulo){ var p = base > 0 ? v / base : 0;
-    return '<div class="comp"><div class="cn"><span class="nm"' + (titulo ? ' title="' + esc(titulo) + '"' : '') + '>' + esc(nombre) + '</span><b class="num">' + MM(v) + '</b><span class="cp num">' + pct(p) + '</span></div><div class="pista" aria-hidden="true"><div style="width:' + (p * 100).toFixed(1) + '%;background:' + col + '"></div></div></div>'; };
+  var fila = function(nombre, v, base, col, titulo, sub){ var p = base > 0 ? v / base : 0;
+    return '<div class="comp' + (sub ? ' lg' : '') + '"><div class="cn"><span class="nm"' + (titulo ? ' title="' + esc(titulo) + '"' : '') + '>' + esc(nombre) + '</span><b class="num">' + MM(v) + '</b><span class="cp num">' + pct(p) + '</span></div><div class="pista" aria-hidden="true"><div style="width:' + (p * 100).toFixed(1) + '%;background:' + col + '"></div></div>' + (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') + '</div>'; };
   var resumen = fam.map(function(f){ return f.nombre + " " + MM(f.v) + " (" + sh(f.v) + ")"; }).join(", ");
   var h = '<div class="deu-total"><div class="l">Deuda total del grupo</div><div class="v">' + MM(G.total) + '</div>' +
     '<div class="s">sin operaciones entre empresas · ' + ["HC", "PM"].map(function(e){ return NOMBRE[e] + " (" + e + ") " + MM(R[e].total); }).join(" · ") + '</div>' +
@@ -1216,7 +1224,12 @@ function deudaBloques(R, S){
   h += '<div class="deu-fam">' + fam.map(function(f){
     var cuerpo;
     if (f.id === "fin") cuerpo = inst.map(function(x){ return fila(x.nombre, x.v, f.v, f.col); }).join("");
-    else if (f.v > 0) cuerpo = ["HC", "PM"].map(function(e){ return fila(e, R[e][f.k] || 0, f.v, f.col, NOMBRE[e]); }).join("");
+    else if (f.v > 0) {
+      cuerpo = ["HC", "PM"].map(function(e){ return fila(e, R[e][f.k] || 0, f.v, f.col, NOMBRE[e]); }).join("");
+      if (f.id === "prov" && tp) cuerpo = fila("Deuda con proveedores", tp.facturas, f.v, f.col, "Facturas a pagar: lo que se les debe a los proveedores y todavía no se pagó (archivo «Pagos a realizar»)", "facturas pendientes de pago") +
+        fila("Echeqs emitidos", tp.echeqs, f.v, f.col, "Echeqs y cheques propios ya entregados a proveedores que el banco todavía no debitó", (tp.echeqs > 0 || (D.meta && D.meta.echeqs_registro)) ? "entregados, pendientes de débito" : "todavía no hay registro de echeqs cargado") +
+        '<div class="cap">Por empresa · 100% = proveedores</div>' + cuerpo;
+    }
     else cuerpo = '<div class="help" style="margin:0">' + (f.id === "otr" && !(S.otros || []).length ? "Todavía no se cargó la planilla de pasivos." : "Sin saldo.") + '</div>';
     return '<div class="fam ' + f.id + '" style="border-top-color:' + f.col + '"><div class="l">' + esc(f.nombre) + '</div><div class="v">' + MM(f.v) + '</div><div class="s">' + sh(f.v) + ' del total' + (f.nota ? ' · ' + f.nota : '') + '</div>' +
       (f.v > 0 ? '<div class="cap">' + f.cap + '</div>' : '<div class="cap"></div>') + cuerpo + '</div>'; }).join("") + '</div>';
@@ -1252,7 +1265,7 @@ function garantiaAcindar(){         // la garantía del financiamiento con echeq
 }
 function vistaDeuda(){
   var R = D.deuda.resumen, G = R.GRUPO, A = D.deuda.arca, P = D.deuda.proveedores, S = D.deuda.pasivos;
-  var h = deudaBloques(R, S);
+  var h = deudaBloques(R, S, P);
   h += panelAgenda(false, "GRUPO");
   h += panelCosto();
   h += '<div class="panel"><h3>Composición de la deuda · en millones de $</h3><div class="legend"><span><i style="background:var(--s1);border:1px solid var(--s1)"></i>Hormigones Cardales</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Premoldeados</span></div><div id="ch_deu"></div>' +
@@ -1279,9 +1292,15 @@ function vistaDeuda(){
   h += '<div class="panel"><h3>Salieron de la deuda · últimos 7 días</h3>' + (BJ.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Documento</th><th>Detalle</th><th>Empresa</th><th class="n">Venció</th><th class="n">Importe</th></tr></thead><tbody>' +
     BJ.map(function(b){ return '<tr><td>' + esc(b.tipo) + '</td><td>' + esc(b.detalle) + '</td><td>' + b.emp + '</td><td class="num">' + dmy(b.vto) + '</td><td class="num"><b>' + mm(b.importe) + '</b></td></tr>'; }).join("") + '</tbody></table></div>' : '<div class="help">Ningún echeq ni cuota venció en los últimos 7 días.</div>') +
     '<div class="help">Los echeqs descontados y las cuotas de préstamos se dan de baja solos el día siguiente a su vencimiento: la deuda baja sin que nadie tenga que editar nada. Acá se muestran una semana para poder verlos salir.</div></div>';
-  h += '<div class="panel"><h3>Proveedores · financiamiento con proveedores</h3><div class="grid2">' + ["HC","PM"].map(function(e){ var x = P.por_empresa[e]; return '<table><thead><tr><th>' + NOMBRE[e] + '</th><th>Monto</th></tr></thead><tbody><tr><td>Total a pagar</td><td class="num"><b>' + mm(x.importe) + '</b></td></tr><tr><td>Ya vencido</td><td class="num neg">' + mm(x.vencido) + '</td></tr><tr><td>Vence en 30 días</td><td class="num">' + mm(x.a_30) + '</td></tr><tr><td>Vence a más de 30 días</td><td class="num">' + mm(x.mas_30) + '</td></tr></tbody></table>'; }).join("") + '</div>' +
-    '<div class="scrollx" style="margin-top:14px"><table class="tl"><thead><tr><th>Principales proveedores</th><th>Empresa</th><th class="n">Total</th><th class="n">Vencido</th></tr></thead><tbody>' + P.principales.map(function(p){ return '<tr><td>' + esc(p.proveedor) + '</td><td>' + p.emp + '</td><td class="num"><b>' + mm(p.importe) + '</b></td><td class="num' + (p.vencido > 0 ? " neg" : "") + '">' + (p.vencido > 0 ? mm(p.vencido) : "—") + '</td></tr>'; }).join("") +
-    (P.otros ? '<tr class="tot"><td>Otros ' + P.otros + ' proveedores</td><td></td><td class="num">' + mm(P.importe_otros) + '</td><td></td></tr>' : "") + '</tbody></table></div></div>';
+  var tipos = provTipos(P), mz = function(v){ return v ? mm(v) : "—"; };
+  h += '<div class="panel"><h3>' + (tipos ? "Proveedores · facturas a pagar y echeqs emitidos" : "Proveedores · financiamiento con proveedores") + '</h3><div class="grid2">' + ["HC","PM"].map(function(e){ var x = P.por_empresa[e], t = x.por_tipo;
+    var fila = function(rot, k, cls){ return '<tr><td>' + rot + '</td><td class="num' + (cls ? " " + cls : "") + '">' + (k === "importe" ? '<b>' + mm(x[k]) + '</b>' : mm(x[k])) + '</td>' + (tipos ? '<td class="num">' + mz(((t || {}).facturas || {})[k]) + '</td><td class="num">' + mz(((t || {}).echeqs || {})[k]) + '</td>' : '') + '</tr>'; };
+    return '<table><thead><tr><th>' + NOMBRE[e] + '</th><th>' + (tipos ? "Total" : "Monto") + '</th>' + (tipos ? '<th>Facturas</th><th>Echeqs</th>' : '') + '</tr></thead><tbody>' +
+      fila("Total a pagar", "importe") + fila("Ya vencido", "vencido", "neg") + fila("Vence en 30 días", "a_30") + fila("Vence a más de 30 días", "mas_30") + '</tbody></table>'; }).join("") + '</div>' +
+    '<div class="scrollx" style="margin-top:14px"><table class="tl"><thead><tr><th>Principales proveedores</th><th>Empresa</th><th class="n">Total</th>' + (tipos ? '<th class="n">Facturas</th><th class="n">Echeqs</th>' : '') + '<th class="n">Vencido</th></tr></thead><tbody>' +
+    P.principales.map(function(p){ return '<tr><td>' + esc(p.proveedor) + '</td><td>' + p.emp + '</td><td class="num"><b>' + mm(p.importe) + '</b></td>' + (tipos ? '<td class="num">' + mz(p.facturas) + '</td><td class="num">' + mz(p.echeqs) + '</td>' : '') + '<td class="num' + (p.vencido > 0 ? " neg" : "") + '">' + (p.vencido > 0 ? mm(p.vencido) : "—") + '</td></tr>'; }).join("") +
+    (P.otros ? '<tr class="tot"><td>Otros ' + P.otros + ' proveedores</td><td></td><td class="num">' + mm(P.importe_otros) + '</td>' + (tipos ? '<td class="num">' + mz(P.facturas_otros) + '</td><td class="num">' + mz(P.echeqs_otros) + '</td>' : '') + '<td></td></tr>' : "") + '</tbody></table></div>' +
+    (tipos ? '<div class="help"><b>Facturas</b> es la deuda con proveedores: lo que figura a pagar en el archivo «Pagos a realizar», sin las facturas que ya se pagaron con un echeq emitido. <b>Echeqs</b> son los cheques propios ya entregados que el banco todavía no debitó: se acumulan de los archivos «Consulta de cheques propios» de Tango y salen solos cuando el extracto muestra el débito. Ambos suman el total de Proveedores. Los echeqs descontados en Acindar no están acá: son deuda financiera.</div>' : '') + '</div>';
   h += '<div class="panel"><h3>Otros pasivos</h3>' + (S.otros.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Categoría</th><th>Concepto</th><th>Empresa</th><th class="n">Saldo</th><th class="n">Vence</th><th class="n">Cuota estimada</th><th>Observación</th></tr></thead><tbody>' +
     S.otros.map(function(o){ return '<tr style="' + (o.suma ? "" : "color:var(--ink-3)") + '"><td>' + esc(o.categoria) + '</td><td>' + esc(o.concepto) + '</td><td>' + o.emp + '</td><td class="num"><b>' + mm(o.saldo) + '</b>' + (o.suma ? "" : " (no suma)") + '</td><td class="num">' + (o.vto ? dmy(o.vto) : "—") + '</td><td class="num">' + (o.cuota ? mm(o.cuota) + (o.frecuencia ? " " + esc(o.frecuencia) : "") : "—") + '</td><td class="wrapc">' + esc(o.obs) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
     '<div class="help">Total que suma a la deuda: ' + MM(S.otros_total) + '. Se carga en la planilla de pasivos de Drive (UOCRA, fondo de cese laboral, préstamos y otros).</div>' : '<div class="help">Todavía no se cargó la planilla de pasivos (UOCRA, fondo de cese laboral, etc.).</div>') + '</div>';
