@@ -16,6 +16,7 @@
   --brand:#438de2; --accent:#2f6fc0; --accent-ink:#ffffff; --accent-deep:#1d4f8f; --accent-soft:#a8c9f1; --accent-bg:#e5f0fd;
   --bad:#b0443a; --bad-bg:#fbefed; --warn:#8f6a1f; --warn-bg:#fbf5e6; --ok:#2b7a58; --ok-bg:#e7f3ed;
   --s1:#2c68b5; --s2:#85b1e8; --s2b:#4f86cf;
+  --f1:#2a78d6; --f2:#eb6834; --f3:#1baf7a; --f4:#eda100;
   --shadow:0 1px 2px rgba(30,80,150,.06), 0 6px 18px rgba(30,80,150,.06);
 }
 *{box-sizing:border-box}
@@ -270,6 +271,33 @@ ul.ents .cz{display:block;font-weight:400;font-size:11px;color:var(--ink-3);lett
 .kpi .s{font-size:12px;color:var(--ink-3)}
 .kpi svg{display:block;margin-top:6px}
 
+/* deuda: total, reparto por tipo de deuda y composición de cada bloque */
+.deu-total{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--accent-soft);border-radius:8px;padding:16px 18px 12px;box-shadow:var(--shadow);margin-bottom:12px}
+.deu-total .l,.fam .l{font-size:11px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+.deu-total .v{font-size:clamp(34px,5vw,48px);font-weight:600;letter-spacing:-.6px;line-height:1.1;margin:4px 0 2px;color:var(--ink)}
+.deu-total .s,.fam .s{font-size:12px;color:var(--ink-3)}
+.segwrap{position:relative;margin-top:14px}
+.segbar{display:flex;gap:2px;height:28px}
+.segbar>div{display:flex;align-items:center;padding:0 9px;min-width:3px;border-radius:4px;color:#fff;font-size:12px;font-weight:600;white-space:nowrap}
+.segbar>div.osc{color:#0b0b0b}
+.segbar>div:hover,.segbar>div:focus-visible{filter:brightness(1.1)}
+.segbar>div:focus-visible{outline:2px solid var(--accent-deep);outline-offset:1px}
+.deu-total .legend{margin:12px 0 2px}
+.tip .key{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:7px;vertical-align:middle}
+.deu-fam{display:grid;grid-template-columns:minmax(0,1.9fr) repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.fam{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--accent-soft);border-radius:8px;padding:13px 15px 12px;box-shadow:var(--shadow)}
+.fam .v{font-size:24px;font-weight:600;margin:3px 0 1px;letter-spacing:-.2px;color:var(--ink)}
+.fam .cap{font-size:11px;color:var(--ink-3);margin:12px 0 8px;padding-top:9px;border-top:1px solid var(--line)}
+.comp{margin:0 0 9px}.comp:last-child{margin-bottom:0}
+.comp .cn{display:flex;gap:8px;align-items:baseline;font-size:13px}
+.comp .nm{flex:1;min-width:0;color:var(--ink-2)}
+.comp b{font-weight:600}
+.comp .cp{width:34px;text-align:right;color:var(--ink-3);font-size:12px}
+.pista{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:4px}
+.pista>div{height:100%;border-radius:0 4px 4px 0}
+@media (max-width:980px){.deu-fam{grid-template-columns:repeat(3,minmax(0,1fr))}.deu-fam .fin{grid-column:1/-1}}
+@media (max-width:640px){.deu-fam{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.deu-fam .fin,.deu-fam .otr{grid-column:1/-1}.deu-total{padding:14px 14px 10px}.fam .v{font-size:20px}}
+
 .atencion{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .atencion .it{border:1px solid var(--line);border-left:4px solid var(--accent-soft);border-radius:6px;padding:11px 14px;background:var(--surface-2)}
 .atencion .it.r{border-left-color:var(--bad)}
@@ -344,8 +372,8 @@ footer{color:var(--ink-3);font-size:12px;padding:12px 0 8px;border-top:1px solid
   @page{size:A4 landscape;margin:12mm}
   body{background:#fff}
   header.top .btn,nav.tabs,.cump,.seg,#avisos .banner:not(.bad),#avisos details,#ia_fab,#ia_panel,.lectura .acc,.panel.ia-admin,details.revision{display:none!important}
-  header.top,.hero,thead th,tr.res td,.seg button[aria-pressed=true],.kpi{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .panel,.kpi{box-shadow:none;break-inside:avoid}
+  header.top,.hero,thead th,tr.res td,.seg button[aria-pressed=true],.kpi,.fam,.deu-total,.segbar>div,.pista>div,.legend i{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .panel,.kpi,.fam,.deu-total{box-shadow:none;break-inside:avoid}
   main{padding:8px 0}
 }
 /* celular: indicadores de a dos por fila (van al final para ganarle a las reglas generales) */
@@ -1103,16 +1131,17 @@ function panelGarantias(){
   if (!G) return '<div class="panel"><h3>Garantías</h3><div class="help">' + ((D.publicacion && D.publicacion.rol === "admin") ?
     'Este informe todavía no trae garantías. Se leen de la hoja «Garantías» de la planilla de Pasivos (carpeta Pasivos de Drive): tiene que tener al menos una fila con custodio, instrumento y valor de mercado en dólares. Si la planilla se cambió después de la última actualización, tocá «Actualizar ahora». Los accionistas la ven cuando el informe con garantías esté publicado.' :
     'El informe publicado todavía no incluye las garantías. Aparecen apenas se publique la próxima actualización.') + '</div></div>';
-  var C = G.cobertura, disp = G.parcial_usd + G.libre_usd, hoy = D.meta.hoy;
+  var C = G.cobertura, disp = G.parcial_usd + G.libre_usd, hoy = D.meta.hoy,
+      sinContar = [G.usada_caucion_usd ? usd(G.usada_caucion_usd) + " que respaldan cauciones" : "", G.usada_echeqs_usd ? usd(G.usada_echeqs_usd) + " que respaldan el financiamiento de Acindar" : ""].filter(Boolean).join(" y ");
   var dv = G.proximo_vto ? Math.max(0, Math.round((new Date(G.proximo_vto + "T00:00:00") - new Date(hoy + "T00:00:00")) / 864e5)) : null, venc = G.proximo_vto ? dmy(G.proximo_vto) : "—";
   var h = '<div class="panel"><h3>Garantías · activos en dólares que respaldan operaciones financieras</h3><div class="kpis">' +
     kpi("Garantías totales", usd(G.total_usd), G.tipo_cambio ? "≈ " + MM(G.total_pesos) + " a $" + NF0.format(G.tipo_cambio) + " por dólar CCL" : "sin dólar CCL cargado", "") +
-    kpi("Usadas por completo", usd(G.usada_usd), pct(G.usada_usd / (G.total_usd || 1)) + " del total" + (G.usada_caucion_usd ? " · " + usd(G.usada_caucion_usd) + " respaldan cauciones" : ""), "") +
+    kpi("Usadas por completo", usd(G.usada_usd), pct(G.usada_usd / (G.total_usd || 1)) + " del total" + (G.usada_caucion_usd ? " · " + usd(G.usada_caucion_usd) + " respaldan cauciones" : "") + (G.usada_echeqs_usd ? " · " + usd(G.usada_echeqs_usd) + " respaldan a Acindar" : ""), "") +
     kpi("Con disponibilidad", usd(disp), disp ? "sin tomar, según el último extracto de cada custodio" : "toda la garantía está tomada", disp ? "" : "warn") +
     kpi("Próximo vencimiento", venc, (dv !== null ? "en " + dv + " días · " : "") + (G.titulos_usd ? "títulos " + usd(G.titulos_usd) + " · efectivo " + usd(G.efectivo_usd) : ""), dv !== null && dv <= 60 ? "warn" : "") + '</div>';
   if (C) {
     h += '<div class="help" style="margin:0 0 10px"><b>Cobertura.</b> El acuerdo de Hormigones Cardales (' + MM(C.acuerdo_eecc) + ') se respalda con el balance (EECC); el resto, ' + MM(C.acuerdo_respaldado) + ', con estas garantías. ' +
-      (C.veces_tomada ? 'Valuadas al dólar CCL, las garantías usadas para acuerdos bancarios valen ' + MM(C.garantia_tomada_pesos) + (G.usada_caucion_usd ? ' (sin contar ' + usd(G.usada_caucion_usd) + ' que respaldan cauciones)' : '') + ': <b>' + NF2(C.veces_tomada) + ' veces</b> el acuerdo' + (C.veces_utilizado ? ' y <b>' + NF2(C.veces_utilizado) + ' veces</b> lo que hoy se usa de ese descubierto (' + MM(C.utilizado_respaldado) + ')' : '') + (C.veces_total ? '; sumando lo que tiene disponibilidad, ' + NF2(C.veces_total) + ' veces el acuerdo' : '') + '. ' : '') +
+      (C.veces_tomada ? 'Valuadas al dólar CCL, las garantías usadas para acuerdos bancarios valen ' + MM(C.garantia_tomada_pesos) + (sinContar ? ' (sin contar ' + sinContar + ')' : '') + ': <b>' + NF2(C.veces_tomada) + ' veces</b> el acuerdo' + (C.veces_utilizado ? ' y <b>' + NF2(C.veces_utilizado) + ' veces</b> lo que hoy se usa de ese descubierto (' + MM(C.utilizado_respaldado) + ')' : '') + (C.veces_total ? '; sumando lo que tiene disponibilidad, ' + NF2(C.veces_total) + ' veces el acuerdo' : '') + '. ' : '') +
       'Las usadas cubren el acuerdo mientras el dólar CCL no baje de <b>$' + NF0.format(Math.round(C.tc_equilibrio_tomada || 0)) + '</b>' + (C.tc_equilibrio_utilizado ? ' y lo utilizado, de <b>$' + NF0.format(Math.round(C.tc_equilibrio_utilizado)) + '</b>' : '') + (G.tipo_cambio ? ' (hoy $' + NF0.format(G.tipo_cambio) + ').' : '.') + '</div>';
   }
   var DS = G.descubierto;
@@ -1133,13 +1162,72 @@ function panelGarantias(){
   });
   h += '<div class="scrollx"><table class="tl"><thead><tr><th>Custodio / instrumento</th><th class="n">Vence</th><th class="n">Días</th><th class="n">Valor nominal</th><th class="n">Valor de mercado</th><th class="n">Resultado US$</th><th>Estado</th></tr></thead><tbody>' + filas +
     '<tr class="tot"><td colspan="4">Total</td><td class="num"><b>' + usd(G.total_usd) + '</b></td><td></td><td></td></tr></tbody></table></div>' +
-    '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías), valuados como dólar CCL: los dólares MEP se muestran netos del canje a CCL. "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo.</div></div>';
+    '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías), valuados como dólar CCL: los dólares MEP se muestran netos del canje a CCL. "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo. Lo que respalda cauciones o el financiamiento con echeqs de Acindar cuenta como usado, pero no como cobertura del acuerdo bancario.</div></div>';
   return h;
 }
 function vistaGarantias(){ $("vista").innerHTML = panelGarantias(); }
+
+/* ---------- deuda: el total, cómo se reparte por tipo de deuda y la composición de cada bloque ---------- */
+function deudaBloques(R, S){
+  var G = R.GRUPO, tot = G.total || 1, sh = function(v){ return pct(v / tot); };
+  var inst = ["descubierto", "cauciones", "echeqs", "prestamos"].map(function(k, o){ return {nombre: ETQ[CLV.indexOf(k)], v: G[k] || 0, o: o}; })
+    .sort(function(a, b){ return (b.v - a.v) || (a.o - b.o); });
+  var fam = [
+    {id: "fin", nombre: "Deuda financiera", cap: "Por instrumento · 100% = deuda financiera", v: inst.reduce(function(t, x){ return t + x.v; }, 0), col: "var(--f1)", nota: "descubierto, cauciones, echeqs y préstamos"},
+    {id: "arca", nombre: "Planes de ARCA", cap: "Por empresa · 100% = ARCA", v: G.arca || 0, col: "var(--f2)", nota: "deuda fiscal", k: "arca"},
+    {id: "prov", nombre: "Proveedores", cap: "Por empresa · 100% = proveedores", v: G.proveedores || 0, col: "var(--f3)", nota: "deuda comercial", k: "proveedores"},
+    {id: "otr", nombre: "Otros pasivos", cap: "", v: G.otros || 0, col: "var(--f4)", nota: "", k: "otros"}
+  ];
+  var partes = fam.filter(function(f){ return f.v > 0; });
+  var fila = function(nombre, v, base, col, titulo){ var p = base > 0 ? v / base : 0;
+    return '<div class="comp"><div class="cn"><span class="nm"' + (titulo ? ' title="' + esc(titulo) + '"' : '') + '>' + esc(nombre) + '</span><b class="num">' + MM(v) + '</b><span class="cp num">' + pct(p) + '</span></div><div class="pista" aria-hidden="true"><div style="width:' + (p * 100).toFixed(1) + '%;background:' + col + '"></div></div></div>'; };
+  var resumen = fam.map(function(f){ return f.nombre + " " + MM(f.v) + " (" + sh(f.v) + ")"; }).join(", ");
+  var h = '<div class="deu-total"><div class="l">Deuda total del grupo</div><div class="v">' + MM(G.total) + '</div>' +
+    '<div class="s">sin operaciones entre empresas · ' + ["HC", "PM"].map(function(e){ return NOMBRE[e] + " (" + e + ") " + MM(R[e].total); }).join(" · ") + '</div>' +
+    '<div class="segwrap"><div class="segbar" role="group" aria-label="' + esc("Reparto de la deuda total por tipo de deuda: " + resumen) + '">' +
+    partes.map(function(f){ var i = fam.indexOf(f);
+      return '<div tabindex="0" data-n="' + esc(f.nombre) + '" data-v="' + esc(MM(f.v)) + '" data-p="' + sh(f.v) + '" data-c="' + f.col + '" class="' + (f.id === "otr" ? "osc" : "") + '" aria-label="' + esc(f.nombre + ": " + MM(f.v) + ", " + sh(f.v) + " del total") + '" style="flex:' + (f.v / tot).toFixed(5) + ' 1 0%;background:' + f.col + '"><span>' + sh(f.v) + '</span></div>'; }).join("") +
+    '</div><div class="tip"></div></div><div class="legend">' + partes.map(function(f){ return '<span><i style="background:' + f.col + '"></i>' + esc(f.nombre) + '</span>'; }).join("") + '</div></div>';
+  h += '<div class="deu-fam">' + fam.map(function(f){
+    var cuerpo;
+    if (f.id === "fin") cuerpo = inst.map(function(x){ return fila(x.nombre, x.v, f.v, f.col); }).join("");
+    else if (f.v > 0) cuerpo = ["HC", "PM"].map(function(e){ return fila(e, R[e][f.k] || 0, f.v, f.col, NOMBRE[e]); }).join("");
+    else cuerpo = '<div class="help" style="margin:0">' + (f.id === "otr" && !(S.otros || []).length ? "Todavía no se cargó la planilla de pasivos." : "Sin saldo.") + '</div>';
+    return '<div class="fam ' + f.id + '" style="border-top-color:' + f.col + '"><div class="l">' + esc(f.nombre) + '</div><div class="v">' + MM(f.v) + '</div><div class="s">' + sh(f.v) + ' del total' + (f.nota ? ' · ' + f.nota : '') + '</div>' +
+      (f.v > 0 ? '<div class="cap">' + f.cap + '</div>' : '<div class="cap"></div>') + cuerpo + '</div>'; }).join("") + '</div>';
+  return h;
+}
+function deudaAjustar(){            // un bloque angosto no imprime su cifra: queda en el tooltip y en el bloque de abajo
+  Array.prototype.forEach.call(document.querySelectorAll(".segbar>div"), function(s){ var sp = s.querySelector("span"); if (!sp) return; sp.style.display = ""; if (s.clientWidth < sp.offsetWidth + 18) sp.style.display = "none"; });
+}
+function deudaActivar(){
+  var host = document.querySelector(".segwrap"); if (!host) return;
+  var tip = host.querySelector(".tip"), t = null;
+  var ocultar = function(){ tip.style.display = "none"; };
+  var ver = function(s){
+    tip.innerHTML = '<i class="key" style="background:' + esc(s.getAttribute("data-c")) + '"></i><b class="num">' + esc(s.getAttribute("data-v")) + '</b> <span style="color:var(--ink-2)">' + esc(s.getAttribute("data-n")) + ' · ' + esc(s.getAttribute("data-p")) + ' del total</span>';
+    tip.style.display = "block";
+    var r = s.getBoundingClientRect(), hr = host.getBoundingClientRect(), left = r.left - hr.left + r.width / 2 - tip.offsetWidth / 2;
+    tip.style.left = Math.max(0, Math.min(left, hr.width - tip.offsetWidth)) + "px"; tip.style.top = (r.bottom - hr.top + 6) + "px";
+  };
+  Array.prototype.forEach.call(host.querySelectorAll(".segbar>div"), function(s){
+    s.addEventListener("mouseenter", function(){ ver(s); }); s.addEventListener("mouseleave", ocultar);
+    s.addEventListener("focus", function(){ ver(s); }); s.addEventListener("blur", ocultar);
+    s.addEventListener("touchstart", function(){ ver(s); clearTimeout(t); t = setTimeout(ocultar, 3000); }, {passive: true});
+  });
+  deudaAjustar();
+  if (!window._deuRz) { window._deuRz = true; window.addEventListener("resize", deudaAjustar); }
+}
+function garantiaAcindar(){         // la garantía del financiamiento con echeqs de Acindar Pymes, junto a la deuda que respalda
+  var G = D.garantias, L = (G && G.respaldo_echeqs) || [];
+  if (!L.length) return "";
+  var t = L.reduce(function(a, x){ return a + x.valor_usd; }, 0);
+  return '<div class="help"><b>Garantía constituida:</b> ' + L.map(function(x){ return usd(x.valor_usd) + " · " + esc(x.instrumento) + " en " + esc(x.custodio); }).join("; ") +
+    (G.tipo_cambio ? " (≈ " + MM(t * G.tipo_cambio) + " al dólar CCL de $" + NF0.format(G.tipo_cambio) + ")" : "") + '. No suma a la deuda; el detalle está en la pestaña Garantías.</div>';
+}
 function vistaDeuda(){
   var R = D.deuda.resumen, G = R.GRUPO, A = D.deuda.arca, P = D.deuda.proveedores, S = D.deuda.pasivos;
-  var h = '<div class="kpis">' + kpi("Deuda total del grupo", MM(G.total), "sin operaciones entre empresas", "") + kpi("Deuda financiera", MM(G.descubierto + G.cauciones + G.echeqs + (G.prestamos || 0)), "descubierto, cauciones, echeqs y préstamos · " + pct((G.descubierto + G.cauciones + G.echeqs + (G.prestamos || 0)) / (G.total || 1)) + " del total", "") + ETQ.map(function(l, i){ return kpi(l, MM(G[CLV[i]]), pct(G[CLV[i]] / (G.total || 1)) + " del total", ""); }).join("") + '</div>';
+  var h = deudaBloques(R, S);
   h += panelAgenda(false, "GRUPO");
   h += panelCosto();
   h += '<div class="panel"><h3>Composición de la deuda · en millones de $</h3><div class="legend"><span><i style="background:var(--s1);border:1px solid var(--s1)"></i>Hormigones Cardales</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Premoldeados</span></div><div id="ch_deu"></div>' +
@@ -1156,7 +1244,7 @@ function vistaDeuda(){
   h += '<div class="panel"><h3>Financiamiento con echeqs propios · Acindar (aval Merval)</h3>' + (S.echeqs_financiamiento.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Empresa</th><th>Echeq</th><th class="n">Vence</th><th class="n">Días</th><th class="n">Importe</th><th class="n">Descuento estimado</th></tr></thead><tbody>' +
     S.echeqs_financiamiento.map(function(f){ return '<tr><td>' + f.emp + '</td><td>' + esc(f.nro || "—") + '</td><td class="num">' + dmy(f.vto) + '</td><td class="num">' + f.dias + '</td><td class="num"><b>' + mm(f.importe) + '</b></td><td class="num">' + mm(f.descuento_estimado) + '</td></tr>'; }).join("") +
     '<tr class="tot"><td>Total</td><td></td><td></td><td></td><td class="num">' + mm(S.echeqs_total.HC + S.echeqs_total.PM) + '</td><td class="num">' + mm(S.echeqs_financiamiento.reduce(function(a, f){ return a + f.descuento_estimado; }, 0)) + '</td></tr></tbody></table></div>' +
-    '<div class="help">Echeqs emitidos por las empresas sin proveedor, por $ 25 M cada uno, que se descuentan en el mercado con aval de Acindar. Se pagan al vencimiento. Costo de descuento: TNA ' + NF1.format((S.echeqs_tna || 0) * 100) + '% hasta el vencimiento.</div>' : '<div class="help">Sin echeqs descontados vigentes.</div>') + '</div>';
+    '<div class="help">Echeqs emitidos por las empresas sin proveedor, por $ 25 M cada uno, que se descuentan en el mercado con aval de Acindar. Se pagan al vencimiento. Costo de descuento: TNA ' + NF1.format((S.echeqs_tna || 0) * 100) + '% hasta el vencimiento.</div>' : '<div class="help">Sin echeqs descontados vigentes.</div>') + garantiaAcindar() + '</div>';
   var CU = S.prestamos_cuotas || [], sm = function(k){ return CU.reduce(function(t, q){ return t + (q[k] || 0); }, 0); };
   h += '<div class="panel"><h3>Préstamos bancarios · cuotas pendientes</h3>' + (CU.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Banco</th><th>Empresa</th><th>Cuota</th><th class="n">Vence</th><th class="n">Días</th><th class="n">Capital</th><th class="n">Intereses</th><th class="n">Impuestos</th><th class="n">Cuota total</th></tr></thead><tbody>' +
     CU.map(function(q){ return '<tr><td>' + esc(q.banco) + '</td><td>' + q.emp + '</td><td>' + (q.cuota ? q.cuota + ' de ' + q.de : "—") + '</td><td class="num">' + dmy(q.vto) + '</td><td class="num">' + q.dias + '</td><td class="num">' + mm(q.capital) + '</td><td class="num">' + mm(q.interes) + '</td><td class="num">' + mm(q.impuestos) + '</td><td class="num"><b>' + mm(q.importe) + '</b></td></tr>'; }).join("") +
@@ -1173,6 +1261,7 @@ function vistaDeuda(){
     S.otros.map(function(o){ return '<tr style="' + (o.suma ? "" : "color:var(--ink-3)") + '"><td>' + esc(o.categoria) + '</td><td>' + esc(o.concepto) + '</td><td>' + o.emp + '</td><td class="num"><b>' + mm(o.saldo) + '</b>' + (o.suma ? "" : " (no suma)") + '</td><td class="num">' + (o.vto ? dmy(o.vto) : "—") + '</td><td class="num">' + (o.cuota ? mm(o.cuota) + (o.frecuencia ? " " + esc(o.frecuencia) : "") : "—") + '</td><td class="wrapc">' + esc(o.obs) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
     '<div class="help">Total que suma a la deuda: ' + MM(S.otros_total) + '. Se carga en la planilla de pasivos de Drive (UOCRA, fondo de cese laboral, préstamos y otros).</div>' : '<div class="help">Todavía no se cargó la planilla de pasivos (UOCRA, fondo de cese laboral, etc.).</div>') + '</div>';
   $("vista").innerHTML = h;
+  deudaActivar();
   barraApilada($("ch_deu"), ETQ.map(function(l, i){ var k = CLV[i]; return {nombre:l, total:R.GRUPO[k], partes:[R.HC[k], R.PM[k]]}; }), ["var(--s1)","var(--s2)"], ["Hormigones Cardales","Premoldeados"]);
 }
 
