@@ -152,6 +152,15 @@ table.ges .etq.bad{color:var(--bad)}table.ges .etq.warn{color:var(--warn)}table.
 .ges-filtros .seg{display:flex;flex-wrap:wrap}
 table.fl button.eslink{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 table.fl button.eslink:hover,table.fl button.eslink:focus-visible{color:var(--accent-deep);text-decoration-style:solid}
+table.fl button.plegar{background:none;border:0;padding:0 7px 0 0;margin:0;font:inherit;font-size:11px;color:var(--accent-deep);cursor:pointer;width:1.1em;text-align:left}
+table.fl tr.prov td:first-child{padding-left:12px}
+table.fl tr.hij{display:none}table.fl.pa tr.hij{display:table-row}
+table.fl tr.hij td:first-child{padding-left:34px;font-size:12.5px;color:var(--ink-2)}
+table.fl tr.hij td.num{font-size:12.5px;color:var(--ink-2)}
+.ritmo-nota{margin-top:10px}
+table.ritmo-mes{margin-top:4px}table.ritmo-mes th:first-child,table.ritmo-mes td:first-child{text-align:left;white-space:normal;min-width:200px}
+table.ritmo-mes tr.tot td{font-weight:700;border-top:1px solid var(--line-2,#c9d3e6)}table.ritmo-mes tr.uni td{font-size:12.5px;color:var(--ink-2)}
+@media print{table.fl tr.hij{display:table-row}table.fl button.plegar{display:none}}
 @media (max-width:600px){.ges-filtros .seg button{padding:7px 10px;font-size:12px;flex:1 1 auto}.ges-cab .acc .btn{flex:1 1 auto}}
 @media print{.ges-guardar,.ges-cab .acc,.ges-filtros{display:none!important}}
 .prio{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:9px;border:1px solid currentColor;margin-right:6px;vertical-align:1px;white-space:nowrap}
@@ -452,7 +461,7 @@ var $ = function(id){ return document.getElementById(id); };
 var esc = function(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
 var NF1 = new Intl.NumberFormat("es-AR", {minimumFractionDigits:1, maximumFractionDigits:1});
 var NF0 = new Intl.NumberFormat("es-AR", {maximumFractionDigits:0});
-var r1 = function(v){ return Math.round((v || 0) / 1e5) / 10; };
+var r1 = function(v){ return Math.round((v || 0) / 1e5) / 10 + 0; };                // «+ 0» evita el «-0,0» de un residuo de coma flotante
 var mm = function(v){ return NF1.format(r1(v)); };                                  // 1.234,5 (con signo −)
 var par = function(v){ var x = r1(v); return x < 0 ? "(" + NF1.format(-x) + ")" : NF1.format(x); };   // (1.234,5) estilo contable
 var MM = function(v){ var x = r1(v); return (x < 0 ? "−" : "") + "$ " + NF1.format(Math.abs(x)) + " M"; };
@@ -467,6 +476,7 @@ var store = {
   del: function(k){ try { localStorage.removeItem(k); } catch (e) {} }
 };
 var NOMBRE = {GRUPO:"Grupo", HC:"Hormigones Cardales", PM:"Premoldeados"};
+var provAbierto = store.get("gp_prov") === "1";        // «Proveedores» del flujo: una sola fila; el desglose (echeqs · facturas · ritmo) se despliega a pedido
 
 /* ---------- sesión ---------- */
 $("imprimir").onclick = function(){ window.print(); };
@@ -668,6 +678,7 @@ function lineas(d, S, n){
            sueldos:d.sueldos.slice(0, n), impuestos:d.impuestos.slice(0, n), arca:d.arca.slice(0, n), financieros:d.financieros.slice(0, n),
            fin_prestamos:(d.fin_prestamos || cero).slice(0, n), fin_echeqs:(d.fin_echeqs || cero).slice(0, n)};
   var tot = function(ks){ var o = []; for (var i = 0; i < n; i++) o.push(ks.reduce(function(a, k){ return a + L[k][i]; }, 0)); return o; };
+  L.prov = tot(["pag_cheques","pag_transf","pag_estimado"]);       // «Proveedores»: las tres líneas son partes de un único importe semanal (no se suman entre sí dos veces)
   L.ingresos = tot(["cob_clientes","cob_echeq","cob_nuevas"]); L.oper = tot(["pag_cheques","pag_transf","pag_estimado","sueldos","nof"]); L.fiscal = tot(["impuestos","arca"]);
   L.financ = tot(["fin_prestamos","fin_echeqs","financieros"]);
   L.egresos = tot(["pag_cheques","pag_transf","pag_estimado","sueldos","nof","impuestos","arca","financieros","fin_prestamos","fin_echeqs"]); L.resultado = tot(["cob_clientes","cob_echeq","cob_nuevas","pag_cheques","pag_transf","pag_estimado","sueldos","nof","impuestos","arca","financieros","fin_prestamos","fin_echeqs"]);
@@ -682,17 +693,41 @@ function tablaFlujo(L, n, F, pos0){
   var sec = function(lbl){ return '<tr class="sec"><td colspan="' + (n + 2) + '">' + lbl + '</td></tr>'; };
   var adm = !!(D.publicacion && D.publicacion.rol === "admin" && D.meta.echeqs_registro && D.echeqs && D.echeqs.pendientes);     // el administrador puede abrir los echeqs de cada semana
   var detE = function(lbl, k, c){ return '<tr class="det"><td><span class="dot ' + c + '"></span>' + lbl + '</td>' + L[k].map(function(v, i){ return v ? '<td class="num"><button class="eslink" data-ech-sem="' + D.semanas[i].n + '" title="Ver los echeqs de esta semana">' + par(v) + '</button></td>' : cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
-  var h = '<div class="legend"><span><span class="dot c"></span>Comprometido: ya registrado (facturas, cheques, planes)</span><span><span class="dot"></span>Estimado: ritmo real de pagos y cobranzas de los extractos, o calendario del informe</span></div><div class="scrollx"><table class="fl">' + cab + '<tbody>';
+  var plegable = function(lbl, k){ var ab = provAbierto; return '<tr class="det prov"><td><button class="plegar" data-plegar="prov" aria-expanded="' + ab + '" title="Ver de qué se compone">' + (ab ? "▾" : "▸") + '</button><b>' + lbl + '</b></td>' + L[k].map(function(v){ return cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
+  var hija = function(f, lbl, k, c){ return '<tr class="det hij"><td><span class="dot ' + c + '"></span>' + lbl + '</td>' + L[k].map(function(v, i){ return v ? '<td class="num">' + (f ? '<button class="eslink" data-ech-sem="' + D.semanas[i].n + '" title="Ver los echeqs de esta semana">' + par(v) + '</button>' : par(v)) + '</td>' : cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
+  var h = '<div class="legend"><span><span class="dot c"></span>Comprometido: ya registrado (facturas, cheques, planes)</span><span><span class="dot"></span>Estimado: ritmo real de pagos y cobranzas de los extractos, o calendario del informe</span></div><div class="scrollx"><table class="fl' + (provAbierto ? " pa" : "") + '">' + cab + '<tbody>';
   h += '<tr class="ini"><td>Saldo bancario inicial (todos los bancos)</td><td class="num">' + par(pos0) + '</td>' + new Array(n + 1).join("<td></td>") + '</tr>';
   h += sec("Ingresos") + det("Cobranzas de clientes (cuentas a cobrar)", "cob_clientes", "c") + det("Echeqs de clientes en cartera", "cob_echeq", "c") + det("Cobranzas de ventas nuevas", "cob_nuevas", "") + sub("Total ingresos", "ingresos");
-  h += sec("Egresos operativos") + (adm ? detE : det)(D.meta.echeqs_registro ? "Echeqs emitidos, pendientes de débito" : "Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + det(D.meta.echeqs_registro ? "Proveedores: facturas a pagar (transferencia o echeq a emitir)" : "Proveedores: transferencias y cuenta corriente", "pag_transf", "c") + det("Proveedores: ritmo estimado de pagos", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
+  h += sec("Egresos operativos") + plegable("Proveedores", "prov") + hija(adm, D.meta.echeqs_registro ? "Echeqs emitidos, pendientes de débito" : "Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + hija(false, D.meta.echeqs_registro ? "Facturas a pagar (transferencia o echeq a emitir)" : "Transferencias y cuenta corriente", "pag_transf", "c") + hija(false, "Ritmo habitual estimado (completa lo que todavía no está registrado)", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
   h += sec("Egresos fiscales") + det("Impuestos y cargas sociales", "impuestos", "") + det("Planes de ARCA (regularización de cuotas)", "arca", "c") + sub("Total egresos fiscales", "fiscal");
   h += sec("Egresos financieros") + det("Cuotas de préstamos bancarios", "fin_prestamos", "c") + det("Echeqs propios descontados que vencen", "fin_echeqs", "c") + det("Intereses bancarios, comisiones y débitos", "financieros", "") + sub("Total egresos financieros", "financ");
   h += '<tr class="res"><td>Resultado de la semana</td>' + L.resultado.map(function(v){ return cel(v); }).join("") + cel(SUMA(L.resultado)) + '</tr>';
   h += '<tr class="sub"><td>Saldo bancario final (posición)</td>' + L.posicion.map(function(v){ return cel(v, v < -F.acuerdo ? "bajo" : ""); }).join("") + '<td></td></tr>';
   h += '<tr><td>Margen disponible sobre acuerdos</td>' + L.margen.map(function(v){ return cel(v); }).join("") + '<td></td></tr>';
   h += '<tr><td>Certeza: parte comprometida del movimiento</td>' + L.certeza.map(function(v){ return '<td class="num"><span class="cert"><i><b style="width:' + Math.round((v || 0) * 100) + '%"></b></i>' + pct(v) + '</span></td>'; }).join("") + '<td></td></tr>';
-  return h + '</tbody></table></div>' + (adm ? '<div class="help">Tocá un importe de «Echeqs emitidos, pendientes de débito» para ver qué echeqs lo componen en esa semana.</div>' : "");
+  return h + '</tbody></table></div>' + (adm ? '<div class="help">Desplegá «Proveedores» (▸) y tocá un importe de «Echeqs emitidos, pendientes de débito» para ver qué echeqs lo componen en esa semana.</div>' : "");
+}
+function notaProveedores(){
+  // Al pie de la tabla: cómo se arma «Proveedores» (para que no parezca que sus tres líneas se suman dos veces) y cuánto se pagó de verdad por mes, al lado de lo que proyecta el flujo
+  var R = D.meta && D.meta.ritmo_proveedores; if (!R || !R.semanal) return "";
+  var s = R.semanal[ent] || R.semanal.GRUPO, ex = (R.excluidos || []).filter(function(x){ return ent === "GRUPO" || x.emp === ent; });
+  var exTot = ex.reduce(function(a, x){ return a + x.importe; }, 0), mes = s.bruto * 52 / 12, hayNof = s.nof > 0 && SUMA(D.flujo[ent].detalle.nof) !== 0;
+  var h = '<div class="help ritmo-nota"><b>Cómo se calcula «Proveedores».</b> Cada semana vale lo ya registrado (echeqs emitidos y facturas a pagar) o, si fuera menos, el ritmo habitual de pagos: la línea «Ritmo habitual estimado» es solo la diferencia, así que las tres líneas son partes de un mismo importe y no se suman dos veces. ' +
+    'El ritmo habitual sale de los extractos bancarios ' + (R.ventana ? "del " + dm(R.ventana[0]) + " al " + dm(R.ventana[1]) : "de las últimas 13 semanas") + ' (transferencias, echeqs propios y echeqs de clientes endosados): ' + MM(s.bruto) + ' por semana, unos ' + MM(mes) + ' por mes' +
+    (ex.length && R.excluir_desde > 0 ? ', sin ' + MM(exTot) + ' de ' + (ex.length === 1 ? "un pago único" : ex.length + " pagos únicos") + ' de más de ' + MM(R.excluir_desde) + ' cada uno (no se repiten todas las semanas; los pagos grandes ya entran por su vencimiento)' : '') +
+    (hayNof ? '. De eso, ' + MM(s.nof) + ' por semana es NOF y va en su propia fila, y quedan ' + MM(s.neto) + ' por semana en «Proveedores»' : '') + '.</div>';
+  var ms = R.meses || [];
+  if (ms.length) {
+    var MES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"], hayU = R.excluir_desde > 0 && ms.some(function(m){ return m.unicos[ent] > 0; }), hayT = ms.some(function(m){ return m.tipos; });
+    var fila = function(lbl, f, cls){ return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + lbl + '</td>' + ms.map(function(m){ return '<td class="num">' + f(m) + '</td>'; }).join("") + '</tr>'; };
+    var tipo = function(k){ return function(m){ return par(((m.tipos || {})[ent] || {})[k] || 0); }; };
+    h += '<div class="scrollx ritmo-nota"><table class="ritmo-mes"><thead><tr><th>Lo que se pagó a proveedores (millones de $)</th>' + ms.map(function(m){ return '<th>' + MES[+m.ym.slice(5, 7) - 1] + (m.completo ? "" : " *") + (m.huecos ? " †" : "") + '</th>'; }).join("") + '</tr></thead><tbody>' +
+      (hayT ? fila("Echeqs propios debitados", tipo("echeqs")) + fila("Transferencias", tipo("transf")) + fila("Echeqs de clientes endosados a proveedores", tipo("endosados")) : "") +
+      fila(hayT ? "Total pagado a proveedores" : "Transferencias, echeqs propios y echeqs de clientes endosados", function(m){ return par(m.total[ent]); }, hayT ? "tot" : "") +
+      (hayU ? fila("de los cuales, pagos únicos de más de " + MM(R.excluir_desde), function(m){ return m.unicos[ent] > 0 ? par(m.unicos[ent]) : "—"; }, "uni") : "") + '</tbody></table></div>' +
+      '<div class="help">Incluye el NOF, que los extractos no separan. * Mes en curso, hasta el último extracto. † Faltan tramos de extractos en ese mes: lo pagado es un piso.</div>';
+  }
+  return h;
 }
 function sinDetalle(){ $("vista").innerHTML = '<div class="panel">El detalle por línea se publica con la próxima actualización automática (todos los días hábiles a las 11:00).</div>'; }
 
@@ -811,7 +846,7 @@ function vistaSemanas(){
     kpi("Resultado · 4 semanas", MM(SUMA(L.resultado)), "ingresos menos egresos", SUMA(L.resultado) < 0 ? "bad" : "ok") + kpi("Saldo al cierre de la semana 4", MM(L.posicion[n - 1]), "mínimo del período " + MM(mn), mn < -F.acuerdo ? "bad" : "warn") + '</div>';
   h += '<div class="grid2"><div class="panel"><h3>Posición bancaria al cierre de cada semana</h3><div class="chart" id="ch_pos"></div></div><div class="panel"><h3>Ingresos y egresos</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div></div>';
   h += '<div class="panel" style="margin-top:16px"><h3>Cash flow de las próximas 4 semanas · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3>' + tablaFlujo(L, n, F, pos0) +
-    '<div class="help">Los egresos no cambian con el cumplimiento de cobranza. ' + (SUMA(L.nof) ? "Sueldos y NOF siguen el calendario de pagos del informe: mensuales, jornales y NOF el 4.º día hábil de cada mes y de cada quincena, y SAC el 18/12 y el 30/06. " : "Sueldos y NOF se estiman con el ritmo real de pagos de las últimas 13 semanas según los extractos bancarios. ") + 'Los pagos a proveedores combinan la deuda registrada con el ritmo real de las últimas 13 semanas (' + (D.meta.ventana_ritmo ? dm(D.meta.ventana_ritmo[0]) + " al " + dm(D.meta.ventana_ritmo[1]) : "") + ') según los extractos bancarios.</div></div>';
+    '<div class="help">Los egresos no cambian con el cumplimiento de cobranza. ' + (SUMA(L.nof) ? "Sueldos y NOF siguen el calendario de pagos del informe: mensuales, jornales y NOF el 4.º día hábil de cada mes y de cada quincena, y el SAC junto con la quincena de diciembre y el 30/06. " : "Sueldos y NOF se estiman con el ritmo real de pagos de las últimas 13 semanas según los extractos bancarios. ") + 'Los pagos a proveedores combinan la deuda registrada con el ritmo real de las últimas 13 semanas (' + (D.meta.ventana_ritmo ? dm(D.meta.ventana_ritmo[0]) + " al " + dm(D.meta.ventana_ritmo[1]) : "") + ') según los extractos bancarios.</div>' + notaProveedores() + '</div>';
   $("vista").innerHTML = h;
   lineaPosicion($("ch_pos"), L.posicion, F.acuerdo, D.semanas.slice(0, n));
   barrasSemanales($("ch_bar"), L.ingresos, L.egresos, D.semanas.slice(0, n));
@@ -824,7 +859,7 @@ function vistaFlujo(){
     kpi("Ingresos · 13 semanas", MM(SUMA(L.ingresos)), pct(cumpl) + " de cumplimiento", "") + kpi("Egresos · 13 semanas", MM(SUMA(L.egresos)), "no cambian con el cumplimiento", "") + '</div>';
   h += '<div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3><div class="chart" id="ch_pos"></div></div>';
   h += '<div class="panel"><h3>Ingresos y egresos por semana · ' + NOMBRE[ent] + '</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div>';
-  h += '<div class="panel"><h3>Flujo de caja trimestral · ' + NOMBRE[ent] + '</h3>' + tablaFlujo(L, n, F, F.pos0) + '</div>';
+  h += '<div class="panel"><h3>Flujo de caja trimestral · ' + NOMBRE[ent] + '</h3>' + tablaFlujo(L, n, F, F.pos0) + notaProveedores() + '</div>';
   h += '<div class="panel"><h3>¿Qué pasa si se cobra menos?</h3><div class="scrollx"><table><thead><tr><th>Cumplimiento</th><th>Punto más bajo</th><th>Semana</th><th>Faltan sobre acuerdos</th></tr></thead><tbody>' +
     D.escenarios.map(function(e){ var p = e.emp[ent].posicion, m = Math.min.apply(null, p), f = m < -F.acuerdo ? -(m + F.acuerdo) : 0;
       return '<tr' + (Math.abs(e.cumpl - cumpl) < 1e-9 ? ' class="sel"' : "") + '><td>' + pct(e.cumpl) + '</td><td class="num">' + par(m) + '</td><td class="num">' + (p.indexOf(m) + 1) + '</td><td class="num' + (f > 0 ? " neg" : "") + '">' + (f > 0 ? par(f) : "—") + '</td></tr>'; }).join("") + '</tbody></table></div></div>';
@@ -1945,6 +1980,11 @@ $("vista").addEventListener("click", function(ev){
   var b = ev.target.closest("button"); if (!b) return;
   if (b.hasAttribute("data-ir")) { tab = b.getAttribute("data-ir"); marcarTab(); store.set("gp_tab", tab); pintar(); window.scrollTo(0, 0); }
   else if (b.hasAttribute("data-ent")) { ent = b.getAttribute("data-ent"); pintar(); }
+  else if (b.hasAttribute("data-plegar")) {                  // «Proveedores»: abrir o cerrar el desglose, sin volver a pintar la pantalla
+    provAbierto = !provAbierto; store.set("gp_prov", provAbierto ? "1" : "0"); var tb = b.closest("table");
+    if (tb) tb.classList.toggle("pa", provAbierto);
+    b.setAttribute("aria-expanded", String(provAbierto)); b.textContent = provAbierto ? "▾" : "▸";
+  }
   else if (b.hasAttribute("data-c")) { cumpl = +b.getAttribute("data-c") / 100; pintar(); }
   else if (b.hasAttribute("data-dec")) {                      // decisión por acción: se puede destildar volviendo a tocar
     var i = +b.getAttribute("data-acc"), dec = b.getAttribute("data-dec"), a = rev.acciones[i] || (rev.acciones[i] = {decision: null, nota: ""});
