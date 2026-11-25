@@ -353,6 +353,14 @@ td.wrapc{white-space:normal}
 .cert{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end}
 .cert i{display:inline-block;width:38px;height:6px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
 .cert i b{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
+/* backlog de obras: tabla en pantallas anchas, tarjetas en las angostas */
+.obr-cards{display:none}
+.obr-card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+.obr-card.tot{background:var(--band)}
+.obr-card dl{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:12px 0 0}
+.obr-card dt{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.obr-card dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+@media (max-width:700px){.obr-tabla{display:none}.obr-cards{display:block}}
 .tag{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--warn-bg);color:#7d5d17;border:1px solid #e6d3a0;white-space:nowrap}
 
 /* gráficos */
@@ -511,7 +519,8 @@ function encabezado(){
   $("tab_admin").hidden = !admin; $("tab_echeqs").hidden = !admin;
   var cobr = pub.rol === "cobranzas", prod = pub.rol === "produccion";
   $("tab_gestion").hidden = !(admin || cobr); $("tab_gestion").style.order = cobr ? "-1" : "";
-  $("tab_obras").hidden = !(admin || cobr || prod); $("tab_obras").style.order = prod ? "-1" : "";
+  var acc = !admin && !cobr && !prod;                                                       // accionista: ve el backlog de obras (solo resumen) cuando el informe publicado lo trae
+  $("tab_obras").hidden = !(admin || cobr || prod || (acc && D.obras_resumen)); $("tab_obras").style.order = prod ? "-1" : ""; $("tab_obras").textContent = acc ? "Backlog de obras" : "Obras";
   document.querySelectorAll("nav.tabs button").forEach(function(b){ var k = b.getAttribute("data-tab"); if (k !== "gestion" && k !== "admin" && k !== "obras" && k !== "echeqs") b.hidden = prod || (cobr && k !== "ventas"); });
   $("subtitulo").textContent = cobr ? "Panel del equipo de Cobranzas" : prod ? "Seguimiento de obras · Producción" : "Informe financiero · uso exclusivo de accionistas";
   if (cobr || prod) { document.title = D.titulo + (cobr ? " · Cobranzas" : " · Obras"); $("stamp").innerHTML = 'saldos al ' + dmy(m.fecha_saldos); av = []; }
@@ -1575,7 +1584,7 @@ $("ia_form").onsubmit = function(ev){ ev.preventDefault(); chatEnviar($("ia_q").
 $("ia_q").onkeydown = function(ev){ if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); chatEnviar($("ia_q").value); } };
 document.addEventListener("keydown", function(ev){ if (ev.key === "Escape" && $("ia_panel").classList.contains("abierto")) $("ia_cerrar").onclick(); });
 /* ---------- Obras y órdenes de compra (jefa de ventas / cobranzas, jefe de producción y administrador) ---------- */
-var obr = {abierta: null, todas: false, msg: null, ocupado: false};
+var obr = {abierta: null, todas: false, msg: null, ocupado: false, vista: "completa"};
 var MESL = function(ym){ return ym ? ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][+ym.slice(5,7) - 1] + " " + ym.slice(0,4) : "—"; };
 var CB = function(c){ return c ? c.replace(/^([A-Z])0*(\d{1,5})(\d{8})$/, function(_, l, pv, n){ return l + "-" + ("0000" + pv).slice(-4) + "-" + n; }) : ""; };
 var NUMU = function(v, d){ return new Intl.NumberFormat("es-AR", {maximumFractionDigits: d || 0}).format(v || 0); };
@@ -1596,10 +1605,11 @@ function obrBarra(o){
     '<span style="width:' + w(o.vencido) + ';background:var(--bad)"></span></div>';
 }
 function obrSubida(){
-  return '<span class="acc" style="display:inline-flex;gap:8px;align-items:center"><input type="file" id="obr_archivo" accept=".xlsx,.xlsm" hidden>' +
+  return '<span class="acc" style="display:inline-flex;gap:8px;align-items:center">' + ((D.publicacion || {}).rol === "admin" && D.obras_resumen ? '<button class="btn ghost" id="obr_ver_acc" title="Lo que ve el accionista en la pestaña «Backlog de obras»">Ver como accionista</button>' : '') + '<input type="file" id="obr_archivo" accept=".xlsx,.xlsm" hidden>' +
     '<button class="btn ghost" id="obr_subir"' + (obr.ocupado ? ' disabled' : '') + ' title="Planilla «Seguimiento de obras» actualizada (hojas Obras, Facturas, Producción y Posiciones)">' + (obr.ocupado ? 'Subiendo…' : 'Subir planilla de obras') + '</button></span>';
 }
 function obrEnlazar(){
+  var va = $("obr_ver_acc"); if (va) va.onclick = function(){ obr.vista = "resumen"; pintar(); window.scrollTo(0, 0); };
   var b = $("obr_subir"), f = $("obr_archivo"); if (!b || !f) return;
   b.onclick = function(){ f.click(); };
   f.onchange = function(){
@@ -1674,6 +1684,7 @@ function obrDetalle(o){
 }
 function vistaObras(){
   var O = D.obras, rolA = (D.publicacion || {}).rol;
+  if ((rolA !== "admin" && rolA !== "cobranzas" && rolA !== "produccion") || (rolA === "admin" && obr.vista === "resumen" && D.obras_resumen)) return vistaObrasResumen();     // el accionista ve solo el resumen
   var cab = '<div class="ges-cab"><div><h2>Obras y órdenes de compra</h2><div class="help" style="margin:0">Avance, certificados, facturación, cobro y anticipos de cada OC de clientes, para Ventas, Cobranzas y Producción.</div></div>' + obrSubida() + '</div>' +
     (obr.msg ? '<div class="banner' + obr.msg.cls + '">' + obr.msg.html + '</div>' : '');
   if (!O || !O.obras) {
@@ -1710,6 +1721,75 @@ function vistaObras(){
   if (o) h += obrDetalle(o);
   $("vista").innerHTML = h;
   obrEnlazar();
+}
+/* ---------- Backlog de obras: el resumen que ve el accionista (el administrador lo previsualiza con «Ver como accionista») ---------- */
+var USD = function(v){ return "US$ " + NUMU(v); };
+var MESC = function(ym){ return ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][+ym.slice(5, 7) - 1] + " " + ym.slice(2, 4); };
+function obrImporte(f, v){ return f.moneda === "USD" ? USD(v) : MM(v); }
+function barrasMeses(host, meses){
+  var n = meses.length, W = host.clientWidth && host.clientWidth < 620 ? 360 : 1000, H = W < 700 ? 210 : 260, ml = W < 700 ? 50 : 62, mr = W < 700 ? 10 : 16, mt = 12, mb = 32;
+  var hi = Math.max.apply(null, meses.map(function(m){ return (m.HC || 0) + (m.PM || 0); }).concat([1])), y = function(v){ return mt + (H - mt - mb) * (1 - v / hi); };
+  var step = Math.pow(10, Math.floor(Math.log10(hi / 3))), k = hi / 3 / step; step *= k < 1.5 ? 1 : k < 3.5 ? 2 : k < 7.5 ? 5 : 10;
+  var cw = (W - ml - mr) / n, bw = cw * 0.62, cada = W < 700 ? 3 : 1;
+  var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Facturación mensual de obras por empresa, últimos ' + n + ' meses">';
+  for (var t = 0; t <= hi; t += step) s += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(t).toFixed(1) + '" y2="' + y(t).toFixed(1) + '" stroke="var(--line)"/><text x="' + (ml - 8) + '" y="' + (y(t) + 4).toFixed(1) + '" text-anchor="end" font-size="12" fill="var(--ink-3)">' + NF0.format(Math.round(t / 1e6)) + '</text>';
+  meses.forEach(function(m, i){
+    var x0 = ml + cw * i + (cw - bw) / 2, base = 0;
+    [["PM", "var(--s1)", "var(--s1)", "Premoldeados"], ["HC", "var(--s2)", "var(--s2b)", "Hormigones Cardales"]].forEach(function(p){
+      var v = m[p[0]] || 0; if (v <= 0) return;
+      var yt = y(base + v), yb = y(base);
+      s += '<rect x="' + x0.toFixed(1) + '" y="' + yt.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, yb - yt - 2).toFixed(1) + '" rx="2" fill="' + p[1] + '" stroke="' + p[2] + '"' + (m.parcial ? ' opacity=".55"' : "") +
+        '><title>' + esc(MESL(m.mes) + " · " + p[3] + ": " + MM(v) + (m.parcial ? " (mes en curso, parcial)" : "")) + '</title></rect>';
+      base += v;
+    });
+    if (i % cada === 0 || i === n - 1) s += '<text x="' + (ml + cw * (i + 0.5)).toFixed(1) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="12" fill="var(--ink-3)">' + MESC(m.mes) + (m.parcial ? "*" : "") + '</text>';
+  });
+  host.innerHTML = s + "</svg>";
+}
+function vistaObrasResumen(){
+  var R = D.obras_resumen, admin = (D.publicacion || {}).rol === "admin";
+  var cab = '<div class="ges-cab"><div><h2>Backlog de obras</h2><div class="help" style="margin:0">Resumen de las órdenes de compra de clientes del grupo: lo contratado, lo ya entregado y facturado, lo que falta ejecutar y lo que está por cobrar.</div></div>' +
+    (admin ? '<span class="acc"><button class="btn ghost" id="obr_ver_completa">Volver a la ficha completa</button></span>' : '') + '</div>' +
+    (admin ? '<div class="banner">Así lo ven los accionistas: solo este resumen, sin alertas ni detalle de comprobantes.</div>' : '');
+  var volver = function(){ var b = $("obr_ver_completa"); if (b) b.onclick = function(){ obr.vista = "completa"; pintar(); window.scrollTo(0, 0); }; };
+  if (!R || !R.obras || !R.obras.length) { $("vista").innerHTML = '<div class="panel">' + cab + '<div class="help">Todavía no hay seguimiento de obras cargado en este informe.</div></div>'; return volver(); }
+  var K = R.kpis, partes = [], conSaldo = 0, hayRef = false, sd = function(t){ return '<span class="help" style="margin:0">' + t + '</span>'; };
+  ["ARS", "USD"].forEach(function(m){ if (K.saldos[m]) { partes.push(m === "USD" ? USD(K.saldos[m].importe) : MM(K.saldos[m].importe)); conSaldo += K.saldos[m].obras; } });
+  R.obras.forEach(function(f){ if (f.en_curso && f.saldo_origen === "calculado" && f.referencial) hayRef = true; });
+  var h = '<div class="panel">' + cab + '<div class="kpis">' +
+    kpi("Obras en curso", NUMU(K.en_curso), "de " + K.obras + " órdenes de compra", "") +
+    kpi("Saldo a ejecutar", partes.length ? partes[0] : "—", partes.length ? (partes.length > 1 ? "más " + partes[1] + " · " : "") + "informado en " + conSaldo + " de " + K.en_curso + " obras en curso" + (hayRef ? ", sobre un monto de cabecera referencial" : "") : "las obras en curso son pedidos abiertos sin monto", "") +
+    kpi("Facturado en " + K.anio, MM(K.facturado_anio), "ritmo de " + MM(K.prom_3m) + " por mes (últimos 3 meses cerrados)", "") +
+    kpi("Por cobrar de obras", MM(K.a_cobrar), K.vencido ? MM(K.vencido) + " vencido" : "nada vencido", K.vencido ? "warn" : "") + '</div></div>';
+  h += '<div class="panel"><h3>Facturación mensual de obras (neto, en millones de pesos)</h3><div class="legend"><span><i style="background:var(--s1);border:1px solid var(--s1)"></i>Premoldeados</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Hormigones Cardales</span></div><div class="chart" id="ch_obras"></div>' +
+    '<div class="help">Facturas de entrega emitidas en cada mes, sin IVA y netas de notas de crédito de ajuste. * Mes en curso, parcial. La facturación sigue el ritmo de certificación de cada obra, por eso hay meses con mucho y meses con poco.</div></div>';
+  var filas = "", tarjetas = "";
+  R.obras.forEach(function(f){
+    var quieta = f.en_curso && !(f.prom_3m > 0), pill = '<span class="pill ' + (f.en_curso ? 'ok' : '') + '" style="padding:1px 9px;font-size:11px">' + esc(f.estado) + '</span>';
+    var quien = esc(f.cliente_final || f.cliente) + ' · OC ' + esc(f.oc) + ' · ' + f.empresa, tit = esc(f.cliente) + (f.cliente_final ? ' para ' + esc(f.cliente_final) : '');
+    var aviso = quieta ? '<div class="help" style="margin:2px 0 0;color:var(--warn)">sin facturación en los últimos 3 meses</div>' : '';
+    var monto = f.monto ? '<b>' + obrImporte(f, f.monto) + '</b>' + (f.referencial ? '<div class="help" style="margin:0">referencial</div>' : '') : '<span class="help" style="margin:0" title="Pedido abierto: no tiene monto de cabecera cargado; solo se factura lo ejecutado">pedido abierto</span>';
+    var avance = (f.avance === null || f.avance === undefined) ? sd('—') :
+      '<div style="display:flex;align-items:center;gap:8px;min-width:84px"><div style="flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden"><span style="display:block;height:100%;width:' + Math.min(100, Math.round(f.avance * 100)) + '%;background:var(--s1)"></span></div><span class="num">' + pct(f.avance) + '</span></div>';
+    var saldo = f.saldo_origen === "terminada" ? sd('terminada') : (f.saldo === null ? sd('sin dato') : '<b>' + obrImporte(f, f.saldo) + '</b>');
+    var ritmo = f.en_curso ? MM(f.prom_3m) : sd('—'), ult = f.ultimo_periodo ? MESL(f.ultimo_periodo) : '—';
+    var cobrar = f.a_cobrar > 0 ? MM(f.a_cobrar) + (f.vencido ? '<div class="help" style="margin:0;color:var(--bad)">' + MM(f.vencido) + ' vencido</div>' : '') : sd('—');
+    filas += '<tr><td><b>' + esc(f.obra) + '</b><div class="help" style="margin:3px 0 0" title="' + tit + '">' + pill + ' ' + quien + '</div>' + aviso + '</td><td class="num">' + monto + '</td><td class="num">' + MM(f.facturado) + '</td><td>' + avance +
+      '</td><td class="num">' + saldo + '</td><td class="num">' + ritmo + '</td><td>' + ult + '</td><td class="num">' + cobrar + '</td></tr>';
+    tarjetas += '<div class="obr-card"><div><b>' + esc(f.obra) + '</b></div><div class="help" style="margin:3px 0 0" title="' + tit + '">' + pill + ' ' + quien + '</div>' + aviso + '<dl>' +
+      '<div><dt>Monto de la OC</dt><dd>' + monto + '</dd></div><div><dt>Facturado acumulado</dt><dd>' + MM(f.facturado) + '</dd></div><div><dt>Avance</dt><dd>' + avance + '</dd></div><div><dt>Saldo a ejecutar</dt><dd>' + saldo + '</dd></div>' +
+      '<div><dt>Ritmo mensual</dt><dd>' + ritmo + '</dd></div><div><dt>Último certificado</dt><dd>' + ult + '</dd></div><div><dt>Por cobrar</dt><dd>' + cobrar + '</dd></div></dl></div>';
+  });
+  tarjetas += '<div class="obr-card tot"><div><b>Total</b></div><dl><div><dt>Facturado acumulado</dt><dd>' + MM(K.facturado) + '</dd></div><div><dt>Saldo a ejecutar</dt><dd>' + (partes.length ? partes.join("<br>") : "—") + '</dd></div><div><dt>Ritmo mensual</dt><dd>' + MM(K.prom_3m) +
+    '</dd></div><div><dt>Por cobrar</dt><dd>' + MM(K.a_cobrar) + '</dd></div></dl></div>';
+  h += '<div class="panel"><h3>Órdenes de compra</h3><div class="scrollx obr-tabla"><table class="tl"><thead><tr><th>Obra</th><th class="n">Monto<br>de la OC</th><th class="n">Facturado<br>acumulado</th><th>Avance</th><th class="n">Saldo a<br>ejecutar</th><th class="n">Ritmo<br>mensual</th><th>Último<br>certificado</th><th class="n">Por<br>cobrar</th></tr></thead><tbody>' + filas +
+    '<tr class="tot"><td colspan="2"><b>Total</b></td><td class="num"><b>' + MM(K.facturado) + '</b></td><td></td><td class="num"><b>' + (partes.length ? partes.join(" + ") : "—") + '</b></td><td class="num"><b>' + MM(K.prom_3m) + '</b></td><td></td><td class="num"><b>' + MM(K.a_cobrar) + '</b></td></tr></tbody></table></div>' +
+    '<div class="obr-cards">' + tarjetas + '</div>' +
+    '<div class="help">Importes sin IVA, salvo «Por cobrar», que incluye IVA. <b>Facturado</b>: facturas de entrega netas de notas de crédito de ajuste; en Newmont no se cuenta la factura de anticipo (se descuenta de cada factura de entrega). <b>Saldo a ejecutar</b>: lo que falta de la orden de compra (monto menos lo entregado, o el saldo informado por Comercial); las obras sin monto son pedidos abiertos de A-Evangelista / YPF, donde el monto de cabecera es referencial y solo se factura lo ejecutado, y no suman al total. <b>Ritmo mensual</b>: promedio de facturación de los últimos 3 meses cerrados (' +
+    K.meses_ritmo.map(MESC).join(", ") + '). <b>Último certificado</b>: mes de obra del último certificado facturado. Los importes de Newmont están en dólares donde se indica.' + (R.corte_cartera ? ' Cobranzas al ' + dmy(R.corte_cartera) + '.' : '') + '</div></div>';
+  $("vista").innerHTML = h;
+  barrasMeses($("ch_obras"), R.meses);
+  volver();
 }
 /* ---------- Echeqs emitidos pendientes de débito (solo administración) ---------- */
 var ech = {filtro: "todos", mas: {}, sem: 1};
@@ -1850,7 +1930,7 @@ function pintar(){
   var rolAct = (D.publicacion || {}).rol;
   if (rolAct === "cobranzas" && tab !== "gestion" && tab !== "ventas" && tab !== "obras") { tab = "gestion"; marcarTab(); }
   if (rolAct === "produccion" && tab !== "obras") { tab = "obras"; marcarTab(); }
-  if (tab === "obras" && rolAct !== "admin" && rolAct !== "cobranzas" && rolAct !== "produccion") { tab = "resumen"; marcarTab(); }
+  if (tab === "obras" && rolAct !== "admin" && rolAct !== "cobranzas" && rolAct !== "produccion" && !D.obras_resumen) { tab = "resumen"; marcarTab(); }
   if (tab === "gestion" && rolAct !== "admin" && rolAct !== "cobranzas") { tab = "resumen"; marcarTab(); }
   if (tab === "echeqs" && rolAct !== "admin") { tab = "resumen"; marcarTab(); }
   encabezado(); configurarChat();
