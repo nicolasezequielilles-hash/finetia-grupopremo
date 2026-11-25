@@ -1505,7 +1505,7 @@ function provTipos(P){              // «Proveedores» abierto en deuda con prov
 }
 function deudaBloques(R, S, P){
   var G = R.GRUPO, tot = G.total || 1, sh = function(v){ return pct(v / tot); }, tp = provTipos(P);
-  var inst = ["descubierto", "cauciones", "echeqs", "prestamos"].map(function(k, o){ return {nombre: ETQ[CLV.indexOf(k)], k: k, v: G[k] || 0, o: o}; })
+  var inst = ["descubierto", "cauciones", "echeqs", "prestamos"].map(function(k, o){ return {nombre: ETQ[CLV.indexOf(k)], v: G[k] || 0, o: o}; })
     .sort(function(a, b){ return (b.v - a.v) || (a.o - b.o); });
   var fam = [
     {id: "fin", nombre: "Deuda financiera", cap: "Por instrumento · 100% = deuda financiera", v: inst.reduce(function(t, x){ return t + x.v; }, 0), col: "var(--f1)", nota: "descubierto, cauciones, echeqs y préstamos"},
@@ -1525,8 +1525,7 @@ function deudaBloques(R, S, P){
     '</div><div class="tip"></div></div><div class="legend">' + partes.map(function(f){ return '<span><i style="background:' + f.col + '"></i>' + esc(f.nombre) + '</span>'; }).join("") + '</div></div>';
   h += '<div class="deu-fam">' + fam.map(function(f){
     var cuerpo;
-    if (f.id === "fin") cuerpo = inst.map(function(x){ var q = x.k === "descubierto" && x.v > 0 ? descPuenteDatos("GRUPO") : null;     // v19: el descubierto dice de dónde sale y cuál es la posición neta del flujo
-      return q ? fila(x.nombre, x.v, f.v, f.col, "Saldo negativo de la cuenta de CMF; el flujo parte de la posición neta de todos los bancos", "saldo negativo de CMF · el flujo parte de " + MM(q.neto) + " neto de las demás cuentas (cierre exacto más abajo)") : fila(x.nombre, x.v, f.v, f.col); }).join("");
+    if (f.id === "fin") cuerpo = inst.map(function(x){ return fila(x.nombre, x.v, f.v, f.col); }).join("");
     else if (f.v > 0) {
       cuerpo = ["HC", "PM"].map(function(e){ return fila(e, R[e][f.k] || 0, f.v, f.col, NOMBRE[e]); }).join("");
       if (f.id === "prov" && tp) cuerpo = fila("Deuda con proveedores", tp.facturas, f.v, f.col, "Facturas a pagar: lo que se les debe a los proveedores y todavía no se pagó (archivo «Pagos a realizar»)", "facturas pendientes de pago") +
