@@ -343,6 +343,7 @@ tr.sub td{font-weight:700;background:var(--surface-2)}
 tr.res td{font-weight:700;background:var(--band-2);color:var(--accent-deep);border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
 tr.det td:first-child{padding-left:22px}
 tr.ini td{color:var(--ink-2);font-style:italic}
+.inisub{display:block;font-style:normal;font-size:11px;color:var(--ink-3);margin-top:2px;line-height:1.35}.inisub b{font-weight:600;color:var(--ink-2)}.inisub.neg{color:var(--bad)}
 td.bajo{color:var(--bad);font-weight:600}
 table.tl td,table.tl th{text-align:left}
 table.tl td.num,table.tl th.n{text-align:right}
@@ -675,6 +676,11 @@ function barraApilada(host, filas, colores, etiquetas){
 
 /* ---------- piezas ---------- */
 function kpi(l, v, s, tono, extra){ return '<div class="kpi ' + (tono || "") + '"><div class="l">' + l + '</div><div class="v num' + (tono === "bad" ? " bad" : "") + '">' + v + '</div><div class="s">' + s + '</div>' + (extra || "") + '</div>'; }
+function subPosicion(F){            // debajo de la posición bancaria: de dónde sale (descubierto en CMF y demás cuentas) y los acuerdos
+  var q = descPuenteDatos(ent), t = F.acuerdo ? "acuerdos " + MM(F.acuerdo) : "sin acuerdo";
+  if (q && q.descubierto > 0 && Math.abs(q.neto - F.pos0) <= 1) t = "descubierto en CMF " + MM(q.descubierto) + (Math.abs(q.otras) >= 5e4 ? " · demás cuentas " + (q.otras > 0 ? "+" : "") + MM(q.otras) : "") + " · " + t;
+  return t;
+}
 function selector(){ return '<div class="seg" role="group" aria-label="Empresa">' + ["GRUPO","HC","PM"].map(function(e){ return '<button data-ent="' + e + '" aria-pressed="' + (e === ent) + '">' + NOMBRE[e] + '</button>'; }).join("") + '</div>'; }
 function tituloSec(t, s){ return '<div class="titulo-sec"><h2>' + t + '</h2>' + (s ? '<span>' + s + '</span>' : "") + '</div>'; }
 function escenario(c, e){ var k = D.escenarios.filter(function(x){ return Math.abs(x.cumpl - c) < 1e-9; })[0]; return k ? k.emp[e] : null; }
@@ -715,7 +721,11 @@ function tablaFlujo(L, n, F, pos0){
   var plegable = function(lbl, k){ var ab = provAbierto; return '<tr class="det prov"><td><button class="plegar" data-plegar="prov" aria-expanded="' + ab + '" title="Ver de qué se compone">' + (ab ? "▾" : "▸") + '</button><b>' + lbl + '</b></td>' + L[k].map(function(v){ return cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
   var hija = function(f, lbl, k, c){ return '<tr class="det hij"><td><span class="dot ' + c + '"></span>' + lbl + '</td>' + L[k].map(function(v, i){ return v ? '<td class="num">' + (f ? '<button class="eslink" data-ech-sem="' + D.semanas[i].n + '" title="Ver los echeqs de esta semana">' + par(v) + '</button>' : par(v)) + '</td>' : cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
   var h = cobEntrada() + '<div class="legend"><span><span class="dot c"></span>Comprometido: ya registrado (facturas, cheques, planes)</span><span><span class="dot"></span>Estimado: ritmo real de pagos y cobranzas de los extractos, o calendario del informe</span></div><div class="scrollx"><table class="fl' + (provAbierto ? " pa" : "") + '">' + cab + '<tbody>';
-  h += '<tr class="ini"><td>Saldo bancario inicial (todos los bancos)</td><td class="num">' + par(pos0) + '</td>' + new Array(n + 1).join("<td></td>") + '</tr>';
+  var dpi = descPuenteDatos(ent), subI = "";                                                                       // v19: de dónde sale el saldo inicial (descubierto en CMF y demás cuentas); el cierre exacto, en pesos, está en Deuda
+  if (dpi && dpi.descubierto > 0) subI = Math.abs(dpi.neto - pos0) <= 1
+    ? '<small class="inisub" title="' + esc("En pesos: descubierto en CMF " + NF2(-dpi.descubierto) + " + demás cuentas, FCI e inversiones " + NF2(dpi.otras) + " = " + NF2(dpi.neto)) + '">incluye descubierto en CMF <b>' + par(-dpi.descubierto) + '</b>' + (Math.abs(dpi.otras) >= 5e4 ? ' y otras cuentas <b>' + par(dpi.otras) + '</b>' : "") + ' · cierre exacto en Deuda</small>'
+    : '<small class="inisub neg">no coincide con la posición neta de Tesorería (' + par(dpi.neto) + ')</small>';
+  h += '<tr class="ini"><td>Saldo bancario inicial (todos los bancos)' + subI + '</td><td class="num">' + par(pos0) + '</td>' + new Array(n + 1).join("<td></td>") + '</tr>';
   h += sec("Ingresos") + detC("Cobranzas de clientes (cuentas a cobrar)", "cob_clientes", "c") + detC("Echeqs de clientes en cartera", "cob_echeq", "c") + detC("Cobranzas de ventas nuevas", "cob_nuevas", "") + sub("Total ingresos", "ingresos");
   h += sec("Egresos operativos") + plegable("Proveedores", "prov") + hija(adm, D.meta.echeqs_registro ? "Echeqs emitidos, pendientes de débito" : "Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + hija(false, D.meta.echeqs_registro ? (D.meta.ritmo_proveedores && D.meta.ritmo_proveedores.programacion ? "Facturas a pagar, escalonadas (transferencia o echeq a emitir)" : "Facturas a pagar (transferencia o echeq a emitir)") : "Transferencias y cuenta corriente", "pag_transf", "c") + hija(false, "Ritmo habitual estimado (completa lo que todavía no está registrado)", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
   h += sec("Egresos fiscales") + det("Impuestos y cargas sociales", "impuestos", "") + det("Planes de ARCA (regularización de cuotas)", "arca", "c") + sub("Total egresos fiscales", "fiscal");
@@ -777,7 +787,11 @@ function titularEjecutivo(){
   var fila = function(e){ var ac = D.flujo[e].acuerdo, dsc = D.deuda.resumen[e].descubierto, p = ac ? dsc / ac : 0, c = p > 1 ? "b" : p > .8 ? "w" : "";
     return '<div class="fila"><div class="cab"><span>' + NOMBRE[e] + '</span><span class="num">' + MM(dsc) + ' de ' + MM(ac) + ' · <b>' + pct(p) + '</b></span></div><div class="riel"><i class="' + c + '" style="width:' + Math.min(100, p * 100).toFixed(1) + '%"></i></div></div>'; };
   return '<section class="hero"><div><div class="et">Situación del grupo</div><h2>' + h1 + '</h2><ul>' + li.map(function(x){ return '<li>' + x + '</li>'; }).join("") + '</ul></div>' +
-    '<div class="uso"><h4>Uso hoy de los acuerdos con bancos</h4>' + fila("GRUPO") + fila("HC") + fila("PM") + '<div style="font-size:11.5px;color:var(--band-ink-2)">El descubierto usado es el saldo negativo en cuenta corriente al ' + dmy(D.meta.fecha_saldos) + '.</div></div></section>';
+    '<div class="uso"><h4>Uso hoy de los acuerdos con bancos</h4>' + fila("GRUPO") + fila("HC") + fila("PM") + '<div style="font-size:11.5px;color:var(--band-ink-2)">El descubierto usado es el saldo negativo de la cuenta corriente de CMF al ' + dmy(D.meta.fecha_saldos) + notaUso() + '.</div></div></section>';
+}
+function notaUso(){                 // v19: el descubierto no se compensa con las demás cuentas; el flujo sí parte de la posición neta
+  var q = descPuenteDatos("GRUPO");
+  return q && q.descubierto > 0 && Math.abs(q.otras) >= 5e4 ? ", sin restarle lo que hay en las demás cuentas (" + (q.otras > 0 ? "+" : "") + MM(q.otras) + "): el flujo parte de la posición neta de " + MM(q.neto) : "";
 }
 function puntosAtencion(){
   var C = D.cobranzas.total, A = D.deuda.arca, P = D.deuda.proveedores, it = [];
@@ -854,12 +868,12 @@ function vistaResumen(){
   // Orden pensado para leer en un minuto: veredicto → números → gráfico y alertas → vencimientos → lectura (la interpretación va al final).
   var h = titularEjecutivo() + '<div class="barra">' + selector() + '<span class="help" style="margin:0">Los indicadores siguientes corresponden a ' + NOMBRE[ent] + '.</span></div>';
   h += '<div class="kpis">' +
-    kpi("Posición bancaria hoy", MM(F.pos0), F.acuerdo ? "acuerdos " + MM(F.acuerdo) : "sin acuerdo", F.pos0 < 0 ? "bad" : "ok") +
+    kpi("Posición bancaria hoy", MM(F.pos0), subPosicion(F), F.pos0 < 0 ? "bad" : "ok") +
     kpi("Punto más bajo · 13 semanas", MM(F.minimo), "semana " + F.semana_minimo + " (" + dm(D.semanas[F.semana_minimo - 1].desde) + ")", faltan > 0 ? "bad" : "ok", spark(F.posicion, "var(--s1)")) +
     kpi("Cobranza · 13 semanas", MM(F.cobranza), "comprometida " + pct(F.pct_cobranza_conocida), "", spark(F.lineas.cobranza, "var(--s1)")) +
     kpi("Pagos · 13 semanas", MM(F.pagos), "ARCA " + MM(F.totales.arca) + " · sueldos " + MM(F.totales.sueldos), "", spark(F.pagos_semanal.map(Math.abs), "var(--s2b)")) +
     kpi("Deuda total", MM(deu.total), "descubierto, cauciones, echeqs, ARCA, préstamos, proveedores y otros", "warn") + '</div>';
-  h += '<div class="duo"><div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + '</h3><div class="chart" id="ch_pos"></div><div class="help">En millones de pesos. Negativa = descubierto usado. Por debajo de la línea roja se superan los acuerdos con los bancos.</div></div>' + panelQueMirar() + '</div>';
+  h += '<div class="duo"><div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + '</h3><div class="chart" id="ch_pos"></div><div class="help">En millones de pesos. Negativa = posición neta con los bancos (el descubierto en CMF menos lo que haya en las demás cuentas). Por debajo de la línea roja se superan los acuerdos con los bancos.</div></div>' + panelQueMirar() + '</div>';
   h += panelAgenda(true);
   h += panelLectura();
   $("vista").innerHTML = h;
@@ -1460,7 +1474,7 @@ function panelGarantias(){
     var fe = "";
     DS.empresas.forEach(function(x){ fe += '<tr><td>' + (x.emp === "HC" ? "Hormigones Cardales" : "Premoldeados") + '</td><td class="num">' + MM(x.acuerdo) + '</td><td class="num"><b>' + MM(x.utilizado) + '</b></td><td class="num' + (x.margen < 0 ? " neg" : "") + '">' + (x.margen === null || x.margen === undefined ? "—" : MM(x.margen)) + '</td><td>' + (x.respaldo === "EECC" ? "Balance (EECC)" : "Estas garantías") + '</td><td>' + (x.fuente === "extracto" ? "Extracto de CMF" : "Excel de Tesorería") + (x.fecha ? " al " + dmy(x.fecha) : "") + '</td></tr>'; });
     fe += '<tr class="tot"><td>Total del Grupo</td><td class="num">' + MM(DS.acuerdo_total) + '</td><td class="num"><b>' + MM(DS.utilizado_total) + '</b></td><td class="num">' + MM(DS.acuerdo_total - DS.utilizado_total) + '</td><td></td><td></td></tr>';
-    h += '<h4 style="margin:14px 0 6px">Descubierto utilizado en CMF</h4><div class="scrollx"><table class="tl"><thead><tr><th>Empresa</th><th class="n">Acuerdo</th><th class="n">Utilizado</th><th class="n">Margen</th><th>Respaldo</th><th>Fuente</th></tr></thead><tbody>' + fe + '</tbody></table></div><div class="help">Lo utilizado es el saldo negativo del último movimiento de los extractos de CMF que sube el equipo de Tesorería; solo si el Excel de saldos trae una fecha más nueva se usa el del Excel. Es el mismo descubierto que figura en la deuda del Grupo.</div>';
+    h += '<h4 style="margin:14px 0 6px">Descubierto utilizado en CMF</h4><div class="scrollx"><table class="tl"><thead><tr><th>Empresa</th><th class="n">Acuerdo</th><th class="n">Utilizado</th><th class="n">Margen</th><th>Respaldo</th><th>Fuente</th></tr></thead><tbody>' + fe + '</tbody></table></div><div class="help">Lo utilizado es el saldo negativo del último movimiento de los extractos de CMF que sube el equipo de Tesorería; solo si el Excel de saldos trae una fecha más nueva se usa el del Excel. Es el mismo descubierto que figura en la deuda del Grupo.' + notaGarantias() + '</div>';
   }
   var filas = "";
   G.custodios.forEach(function(c){
@@ -1476,6 +1490,10 @@ function panelGarantias(){
     '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías), valuados como dólar CCL: los dólares MEP se muestran netos del canje a CCL. El dólar CCL se actualiza solo cuando se recalcula el informe, no al abrir esta página (cotización de compra informada por DolarApi.com: la de Ámbito Financiero o, si ésta quedó más de 30 minutos atrás, la de DolarHoy); si no se puede consultar, se usa el último valor guardado y, si no hay, el de la planilla de Pasivos. "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo. Lo que respalda cauciones o el financiamiento con echeqs de Acindar cuenta como usado, pero no como cobertura del acuerdo bancario.</div></div>';
   return h;
 }
+function notaGarantias(){          // v19: este descubierto no es el saldo inicial del flujo; la diferencia son las demás cuentas
+  var q = descPuenteDatos("GRUPO");
+  return q && q.descubierto > 0 ? ' El saldo bancario inicial del flujo (' + MM(q.neto) + ') es la posición neta de todos los bancos: este descubierto' + (Math.abs(q.otras) >= 5e4 ? ' más lo que hay en las demás cuentas, FCI e inversiones (' + (q.otras > 0 ? "+" : "") + MM(q.otras) + ')' : '') + '. El cierre exacto, en pesos, está en Deuda.' : "";
+}
 function vistaGarantias(){ $("vista").innerHTML = panelGarantias(); }
 
 /* ---------- deuda: el total, cómo se reparte por tipo de deuda y la composición de cada bloque ---------- */
@@ -1487,7 +1505,7 @@ function provTipos(P){              // «Proveedores» abierto en deuda con prov
 }
 function deudaBloques(R, S, P){
   var G = R.GRUPO, tot = G.total || 1, sh = function(v){ return pct(v / tot); }, tp = provTipos(P);
-  var inst = ["descubierto", "cauciones", "echeqs", "prestamos"].map(function(k, o){ return {nombre: ETQ[CLV.indexOf(k)], v: G[k] || 0, o: o}; })
+  var inst = ["descubierto", "cauciones", "echeqs", "prestamos"].map(function(k, o){ return {nombre: ETQ[CLV.indexOf(k)], k: k, v: G[k] || 0, o: o}; })
     .sort(function(a, b){ return (b.v - a.v) || (a.o - b.o); });
   var fam = [
     {id: "fin", nombre: "Deuda financiera", cap: "Por instrumento · 100% = deuda financiera", v: inst.reduce(function(t, x){ return t + x.v; }, 0), col: "var(--f1)", nota: "descubierto, cauciones, echeqs y préstamos"},
@@ -1507,7 +1525,8 @@ function deudaBloques(R, S, P){
     '</div><div class="tip"></div></div><div class="legend">' + partes.map(function(f){ return '<span><i style="background:' + f.col + '"></i>' + esc(f.nombre) + '</span>'; }).join("") + '</div></div>';
   h += '<div class="deu-fam">' + fam.map(function(f){
     var cuerpo;
-    if (f.id === "fin") cuerpo = inst.map(function(x){ return fila(x.nombre, x.v, f.v, f.col); }).join("");
+    if (f.id === "fin") cuerpo = inst.map(function(x){ var q = x.k === "descubierto" && x.v > 0 ? descPuenteDatos("GRUPO") : null;     // v19: el descubierto dice de dónde sale y cuál es la posición neta del flujo
+      return q ? fila(x.nombre, x.v, f.v, f.col, "Saldo negativo de la cuenta de CMF; el flujo parte de la posición neta de todos los bancos", "saldo negativo de CMF · el flujo parte de " + MM(q.neto) + " neto de las demás cuentas (cierre exacto más abajo)") : fila(x.nombre, x.v, f.v, f.col); }).join("");
     else if (f.v > 0) {
       cuerpo = ["HC", "PM"].map(function(e){ return fila(e, R[e][f.k] || 0, f.v, f.col, NOMBRE[e]); }).join("");
       if (f.id === "prov" && tp) cuerpo = fila("Deuda con proveedores", tp.facturas, f.v, f.col, "Facturas a pagar: lo que se les debe a los proveedores y todavía no se pagó (archivo «Pagos a realizar»)", "facturas pendientes de pago") +
@@ -1549,7 +1568,7 @@ function garantiaAcindar(){         // la garantía del financiamiento con echeq
 }
 function vistaDeuda(){
   var R = D.deuda.resumen, G = R.GRUPO, A = D.deuda.arca, P = D.deuda.proveedores, S = D.deuda.pasivos;
-  var h = deudaBloques(R, S, P);
+  var h = deudaBloques(R, S, P) + panelCierres();
   h += panelAgenda(false, "GRUPO");
   h += panelCosto();
   h += '<div class="panel"><h3>Composición de la deuda · en millones de $</h3><div class="legend"><span><i style="background:var(--s1);border:1px solid var(--s1)"></i>Hormigones Cardales</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Premoldeados</span></div><div id="ch_deu"></div>' +
@@ -1585,7 +1604,6 @@ function vistaDeuda(){
     P.principales.map(function(p){ return '<tr><td>' + esc(p.proveedor) + '</td><td>' + p.emp + '</td><td class="num"><b>' + mm(p.importe) + '</b></td>' + (tipos ? '<td class="num">' + mz(p.facturas) + '</td><td class="num">' + mz(p.echeqs) + '</td>' : '') + '<td class="num' + (p.vencido > 0 ? " neg" : "") + '">' + (p.vencido > 0 ? mm(p.vencido) : "—") + '</td></tr>'; }).join("") +
     (P.otros ? '<tr class="tot"><td>Otros ' + P.otros + ' proveedores</td><td></td><td class="num">' + mm(P.importe_otros) + '</td>' + (tipos ? '<td class="num">' + mz(P.facturas_otros) + '</td><td class="num">' + mz(P.echeqs_otros) + '</td>' : '') + '<td></td></tr>' : "") + '</tbody></table></div>' +
     (tipos ? '<div class="help"><b>Facturas</b> es la deuda con proveedores: lo que figura a pagar en el archivo «Pagos a realizar», sin las facturas que ya se pagaron con un echeq emitido. <b>Echeqs</b> son los cheques propios ya entregados que el banco todavía no debitó: se acumulan de los archivos «Consulta de cheques propios» de Tango y salen solos cuando el extracto muestra el débito. Ambos suman el total de Proveedores. Los echeqs descontados en Acindar no están acá: son deuda financiera.</div>' : '') + '</div>';
-  var puD = echPuente(D.semanas.length, "GRUPO", null); if (puD) h += '<details class="panel"><summary>Echeqs emitidos: cómo cierra el total con el flujo</summary>' + puD + '</details>';
   h += '<div class="panel"><h3>Otros pasivos</h3>' + (S.otros.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Categoría</th><th>Concepto</th><th>Empresa</th><th class="n">Saldo</th><th class="n">Vence</th><th class="n">Cuota estimada</th><th>Observación</th></tr></thead><tbody>' +
     S.otros.map(function(o){ return '<tr style="' + (o.suma ? "" : "color:var(--ink-3)") + '"><td>' + esc(o.categoria) + '</td><td>' + esc(o.concepto) + '</td><td>' + o.emp + '</td><td class="num"><b>' + mm(o.saldo) + '</b>' + (o.suma ? "" : " (no suma)") + '</td><td class="num">' + (o.vto ? dmy(o.vto) : "—") + '</td><td class="num">' + (o.cuota ? mm(o.cuota) + (o.frecuencia ? " " + esc(o.frecuencia) : "") : "—") + '</td><td class="wrapc">' + esc(o.obs) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
     '<div class="help">Total que suma a la deuda: ' + MM(S.otros_total) + '. Se carga en la planilla de pasivos de Drive (UOCRA, fondo de cese laboral, préstamos y otros).</div>' : '<div class="help">Todavía no se cargó la planilla de pasivos (UOCRA, fondo de cese laboral, etc.).</div>') + '</div>';
@@ -2089,7 +2107,7 @@ function echPuente(n, e, titulo){   // titulo: «h4» (por defecto), «h3» o nu
   var w = D.semanas[n - 1], hasta = w ? dm(w.hasta) : "", adm = !!(D.publicacion && D.publicacion.rol === "admin"), todas = n >= D.semanas.length;
   var v = function(x){ return x ? NF2(x) : "—"; }, cant = function(k){ return ' <span class="help" style="margin:0">· ' + k + (k === 1 ? " echeq" : " echeqs") + '</span>'; };
   var vinculo = adm && D.echeqs && todas && tab !== "echeqs" && ka > 0 ? '<button class="enlace" style="margin-left:0" data-ech-sem="14" title="Ver estos echeqs en la pestaña Echeqs">Después del ' + hasta + '</button>' : "Después del " + hasta;
-  var tr = function(rot, k, p, f, cls){ return '<tr' + (cls ? ' class="' + cls + '"' : "") + '><td>' + rot + cant(k) + '</td><td class="num">' + v(p) + '</td><td class="num">' + v(f) + '</td><td class="num"><b>' + v(cent(p + f)) + '</b></td></tr>'; };
+  var tr = function(rot, k, p, f, cls){ return '<tr' + (cls ? ' class="' + cls + '"' : "") + '><td class="wrapc" style="min-width:150px">' + rot + cant(k) + '</td><td class="num">' + v(p) + '</td><td class="num">' + v(f) + '</td><td class="num"><b>' + v(cent(p + f)) + '</b></td></tr>'; };
   var tit = 'Echeqs emitidos: cómo cierran con ' + (adm ? "el flujo, con Deuda y con la pestaña Echeqs" : "el flujo y con Deuda") + ' · ' + NOMBRE[e || ent];
   return (titulo === null ? "" : titulo === "h3" ? '<h3>' + tit + '</h3>' : '<h4 style="margin:14px 0 6px">' + tit + '</h4>') +
     '<div class="scrollx"><table class="tl"><thead><tr><th>En pesos</th><th class="n">Echeqs emitidos a proveedores</th><th class="n">Echeqs descontados (Acindar)</th><th class="n">Total</th></tr></thead><tbody>' +
@@ -2099,6 +2117,42 @@ function echPuente(n, e, titulo){   // titulo: «h4» (por defecto), «h3» o nu
     '<div class="help">El primer renglón son las filas «Echeqs emitidos, pendientes de débito» y «Echeqs propios descontados que vencen» del flujo; lo que se debita después no está en el flujo ni mueve su posición bancaria. ' +
     'Los totales son los de Deuda («Echeqs emitidos» dentro de Proveedores y «Echeqs descontados (Acindar)» en Deuda financiera)' + (adm ? " y el total de la pestaña Echeqs" : "") + '. ' +
     'Está en pesos para que cierre exacto: en millones con un decimal cada cifra se redondea por separado y una suma puede diferir en 0,1.</div>';
+}
+
+/* ---------- Descubierto: cómo cierra con el saldo inicial del flujo (v19) ---------- */
+function descPuenteDatos(e){        // el puente de la empresa elegida: cuenta de CMF (negativa = descubierto), demás cuentas / FCI / inversiones (neto) y posición neta = saldo inicial del flujo
+  e = e || ent;
+  var P = D.descubierto_puente;
+  if (P && P[e] && typeof P[e].neto === "number") return P[e];
+  var f = D.flujo && D.flujo[e], r = D.deuda && D.deuda.resumen && D.deuda.resumen[e];                  // servidor anterior a v19: se deduce de lo que ya trae (saldo inicial del flujo y descubierto de Deuda)
+  if (!f || !r || typeof f.pos0 !== "number" || typeof r.descubierto !== "number") return null;
+  return {cmf: -r.descubierto, descubierto: r.descubierto, otras: f.pos0 + r.descubierto, neto: f.pos0, pos0: f.pos0};
+}
+function descPuente(titulo){        // titulo: «h4» (por defecto), «h3» o null. Tabla en PESOS para que cierre exacto (en millones con un decimal siempre sobra algún 0,1)
+  var C = ["HC", "PM", "GRUPO"], Q = {};
+  C.forEach(function(e){ Q[e] = descPuenteDatos(e); });
+  if (!Q.HC || !Q.PM || !Q.GRUPO) return "";
+  var v = function(x){ return NF2((x || 0) + 0); }, hay = C.some(function(e){ return Q[e].descubierto > 0; });
+  var dif = C.some(function(e){ return typeof Q[e].pos0 === "number" && Math.abs(Q[e].neto - Q[e].pos0) > 1; });
+  var tr = function(rot, f, cls){ return '<tr' + (cls ? ' class="' + cls + '"' : "") + '><td class="wrapc" style="min-width:150px">' + rot + '</td>' + C.map(function(e){ var x = f(Q[e]); return '<td class="num' + (cls === "neg" ? " neg" : "") + '">' + (cls === "tot" ? '<b>' + v(x) + '</b>' : v(x)) + '</td>'; }).join("") + '</tr>'; };
+  var fu = function(e){ var x = Q[e]; return x.fuente === "extracto" ? "el extracto de CMF" + (x.fecha ? " al " + dmy(x.fecha) : "") : x.fuente === "tesoreria" ? "el Excel de Tesorería" + (x.fecha ? " al " + dmy(x.fecha) : "") : ""; };
+  var fs = fu("HC") === fu("PM") ? fu("HC") : (fu("HC") && fu("PM") ? "HC: " + fu("HC") + " · PM: " + fu("PM") : "");
+  var tit = 'Descubierto bancario: cómo cierra con el saldo inicial del flujo';
+  return (titulo === null ? "" : titulo === "h3" ? '<h3>' + tit + '</h3>' : '<h4 style="margin:14px 0 6px">' + tit + '</h4>') +
+    '<div class="scrollx"><table class="tl"><thead><tr><th>En pesos</th>' + C.map(function(e){ return '<th class="n">' + NOMBRE[e] + '</th>'; }).join("") + '</tr></thead><tbody>' +
+    tr(hay ? "Saldo de la cuenta de CMF (negativo = descubierto)" : "Saldo de la cuenta de CMF", function(x){ return x.cmf; }) +
+    tr("Demás cuentas, FCI e inversiones (neto)", function(x){ return x.otras; }) +
+    tr("Saldo bancario inicial del flujo (todos los bancos)", function(x){ return x.neto; }, "tot") +
+    (dif ? tr("Diferencia con el saldo inicial que toma el flujo", function(x){ return typeof x.pos0 === "number" ? x.neto - x.pos0 : 0; }, "neg") : "") + '</tbody></table></div>' +
+    '<div class="help">' + (hay ? 'El <b>descubierto</b> es el saldo negativo de la cuenta de CMF' + (fs ? ' según ' + fs : '') + ': es el mismo importe que muestran Deuda («Descubierto bancario»), Garantías y «Uso hoy de los acuerdos con bancos». ' : 'La cuenta de CMF está a favor: no hay descubierto. ') +
+    'El flujo parte de la <b>posición neta de todos los bancos</b>, que además suma lo que haya en las demás cuentas, los FCI y las inversiones. ' +
+    (dif ? '<b>Hay una diferencia entre Tesorería y el saldo inicial del flujo: conviene revisarla.</b> ' : '') +
+    'Está en pesos para que cierre exacto: en millones con un decimal cada cifra se redondea por separado y una suma puede diferir en 0,1.</div>';
+}
+function panelCierres(){            // las cifras que parecen distintas entre pantallas, con su cierre exacto en pesos: descubierto y echeqs emitidos
+  var d = descPuente("h4"), e = echPuente(D.semanas.length, "GRUPO", "h4");
+  if (!d && !e) return "";
+  return '<div class="panel"><h3>Cómo cierran estas cifras con el flujo de caja</h3>' + d + e + '</div>';
 }
 
 /* ---------- Echeqs emitidos pendientes de débito (solo administración) ---------- */
