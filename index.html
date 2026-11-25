@@ -253,6 +253,7 @@ ul.ents .cz{display:block;font-weight:400;font-size:11px;color:var(--ink-3);lett
 .banner.warn{border-left-color:var(--warn);background:var(--warn-bg)}
 .ccl{font-size:12.5px;color:var(--ink-2);margin:-2px 0 12px;line-height:1.5}
 .ccl b{color:var(--ink)}
+.ccl-det{margin-top:3px;font-size:12px;color:var(--ink-3)}
 .barra{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:16px;justify-content:space-between}
 .seg{display:inline-flex;border:1px solid var(--line-2);border-radius:6px;overflow:hidden;background:var(--surface)}
 .seg button{background:transparent;border:0;padding:8px 16px;cursor:pointer;color:var(--ink-2);font-weight:500}
@@ -724,7 +725,7 @@ function tablaFlujo(L, n, F, pos0){
   h += '<tr><td>Margen disponible sobre acuerdos</td>' + L.margen.map(function(v){ return cel(v); }).join("") + '<td></td></tr>';
   h += '<tr><td>Certeza: parte comprometida del movimiento</td>' + L.certeza.map(function(v){ return '<td class="num"><span class="cert"><i><b style="width:' + Math.round((v || 0) * 100) + '%"></b></i>' + pct(v) + '</span></td>'; }).join("") + '<td></td></tr>';
   return h + '</tbody></table></div>' + (admC ? '<div class="help">Tocá un importe de «Cobranzas de clientes», «Echeqs de clientes en cartera» o «Cobranzas de ventas nuevas» (o el nombre de la fila) para ver de qué facturas, echeqs y ventas sale, semana por semana.</div>' : "") +
-    (adm ? '<div class="help">Desplegá «Proveedores» (▸) y tocá un importe de «Echeqs emitidos, pendientes de débito» para ver qué echeqs lo componen en esa semana.</div>' : "");
+    (adm ? '<div class="help">Desplegá «Proveedores» (▸) y tocá un importe de «Echeqs emitidos, pendientes de débito» para ver qué echeqs lo componen en esa semana.</div>' : "") + echPuente(n);
 }
 function notaProveedores(){
   // Al pie de la tabla: cómo se arma «Proveedores» (para que no parezca que sus tres líneas se suman dos veces) y cuánto se pagó de verdad por mes, al lado de lo que proyecta el flujo
@@ -1403,6 +1404,17 @@ function panelCosto(){
 var EST_GAR = {usada: ["Usada por completo", ""], parcial: ["Con disponibilidad", "ok"], libre: ["Libre", "ok"]};
 function usd(v){ return "US$ " + NF0.format(Math.round(v || 0)); }
 /* dólar CCL con el que se valúan las garantías: valor, cuál es (compra), de dónde sale y a qué hora; si no es el de hoy, un aviso ámbar */
+function cclOtraFuente(T, admin){                                      // solo administrador: la otra ruta de DolarApi (para entender por qué otra pantalla puede mostrar otro número) y lo que no respondió
+  if (!admin || T.estado !== "online") return "";
+  var otras = T.otras_fuentes || [], fallas = T.intentos || [], det = otras.map(function(o){
+    var d = o.dif_pct;
+    return "Otra fuente: " + o.fuente + " $" + NF2(o.valor) + (o.fecha_cotizacion_txt ? " · cotización del " + o.fecha_cotizacion_txt : "") +
+           (d !== null && d !== undefined ? " · " + (d < 0 ? "−" : "+") + NF1.format(Math.abs(d)) + " % contra la usada" : "");
+  }).concat(fallas.map(function(i){ return "Otra fuente sin datos: " + i.fuente + " — " + i.error; }));
+  if (T.criterio === "mas_reciente" && otras.length) det.push("Se usó esta ruta porque la cotización de la otra era más de 30 minutos más vieja.");
+  else if (T.criterio === "preferida" && otras.length) det.push("Se usa Ámbito mientras la otra ruta no tenga una cotización más de 30 minutos más reciente.");
+  return det.length ? '<div class="ccl-det">' + det.map(esc).join("<br>") + '</div>' : "";
+}
 function lineaCCL(G){
   var T = G.tc;
   if (!T) return "";                                                   // informe anterior a la actualización automática del dólar: se ve como antes
@@ -1412,9 +1424,10 @@ function lineaCCL(G){
       venta = admin && T.campo === "compra" && T.venta ? " · venta $" + NF2(T.venta) : "",
       dif = admin && est !== "planilla" && T.tc_planilla && T.dif_planilla_pct !== null && T.dif_planilla_pct !== undefined ?
             " · " + (T.dif_planilla_pct < 0 ? "−" : "+") + NF1.format(Math.abs(T.dif_planilla_pct)) + " % contra la planilla ($" + NF2(T.tc_planilla) + ")" : "",
+      leido = admin && T.obtenido_txt && (est === "online" || est === "guardado") ? " · leído el " + T.obtenido_txt : "",
       h = "", av = [];
   if (v && (est === "online" || est === "guardado"))
-    h = '<div class="ccl"><b>Dólar CCL ' + esc(v) + '</b> · ' + esc(T.campo || "compra") + (fuente ? ' · ' + esc(fuente) : '') + (hora ? ' · ' + esc(hora) : '') + esc(venta) + esc(dif) + '</div>';
+    h = '<div class="ccl"><b>Dólar CCL ' + esc(v) + '</b> · ' + esc(T.campo || "compra") + (fuente ? ' · ' + esc(fuente) : '') + (hora ? ' · ' + esc(hora) : '') + esc(venta) + esc(dif) + esc(leido) + cclOtraFuente(T, admin) + '</div>';
   else if (v && est === "planilla")
     h = '<div class="ccl"><b>Dólar CCL ' + esc(v) + '</b> · tomado de la planilla de Pasivos (carga manual)' + (T.automatico === false ? ' · actualización automática apagada' : '') + '</div>';
   if (est === "guardado") av.push("Hoy no se pudo actualizar el dólar CCL: se usa el último valor guardado" + (hora ? " (" + hora + ")" : "") + ".");
@@ -1460,7 +1473,7 @@ function panelGarantias(){
   });
   h += '<div class="scrollx"><table class="tl"><thead><tr><th>Custodio / instrumento</th><th class="n">Vence</th><th class="n">Días</th><th class="n">Valor nominal</th><th class="n">Valor de mercado</th><th class="n">Resultado US$</th><th>Estado</th></tr></thead><tbody>' + filas +
     '<tr class="tot"><td colspan="4">Total</td><td class="num"><b>' + usd(G.total_usd) + '</b></td><td></td><td></td></tr></tbody></table></div>' +
-    '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías), valuados como dólar CCL: los dólares MEP se muestran netos del canje a CCL. El dólar CCL se actualiza solo en cada corrida (cotización de compra de Ámbito Financiero, vía DolarApi.com); si no se puede consultar, se usa el último valor guardado y, si no hay, el de la planilla de Pasivos. "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo. Lo que respalda cauciones o el financiamiento con echeqs de Acindar cuenta como usado, pero no como cobertura del acuerdo bancario.</div></div>';
+    '<div class="help">Valores en dólares al ' + (G.fecha ? dmy(G.fecha) : "último dato cargado") + ' (planilla de Pasivos, hoja Garantías), valuados como dólar CCL: los dólares MEP se muestran netos del canje a CCL. El dólar CCL se actualiza solo cuando se recalcula el informe, no al abrir esta página (cotización de compra informada por DolarApi.com: la de Ámbito Financiero o, si ésta quedó más de 30 minutos atrás, la de DolarHoy); si no se puede consultar, se usa el último valor guardado y, si no hay, el de la planilla de Pasivos. "Usada por completo" = ya respalda un acuerdo; "Con disponibilidad" = hay margen sin tomar. Resultado = valor de mercado menos costo, solo donde se cargó el costo. Lo que respalda cauciones o el financiamiento con echeqs de Acindar cuenta como usado, pero no como cobertura del acuerdo bancario.</div></div>';
   return h;
 }
 function vistaGarantias(){ $("vista").innerHTML = panelGarantias(); }
@@ -1572,6 +1585,7 @@ function vistaDeuda(){
     P.principales.map(function(p){ return '<tr><td>' + esc(p.proveedor) + '</td><td>' + p.emp + '</td><td class="num"><b>' + mm(p.importe) + '</b></td>' + (tipos ? '<td class="num">' + mz(p.facturas) + '</td><td class="num">' + mz(p.echeqs) + '</td>' : '') + '<td class="num' + (p.vencido > 0 ? " neg" : "") + '">' + (p.vencido > 0 ? mm(p.vencido) : "—") + '</td></tr>'; }).join("") +
     (P.otros ? '<tr class="tot"><td>Otros ' + P.otros + ' proveedores</td><td></td><td class="num">' + mm(P.importe_otros) + '</td>' + (tipos ? '<td class="num">' + mz(P.facturas_otros) + '</td><td class="num">' + mz(P.echeqs_otros) + '</td>' : '') + '<td></td></tr>' : "") + '</tbody></table></div>' +
     (tipos ? '<div class="help"><b>Facturas</b> es la deuda con proveedores: lo que figura a pagar en el archivo «Pagos a realizar», sin las facturas que ya se pagaron con un echeq emitido. <b>Echeqs</b> son los cheques propios ya entregados que el banco todavía no debitó: se acumulan de los archivos «Consulta de cheques propios» de Tango y salen solos cuando el extracto muestra el débito. Ambos suman el total de Proveedores. Los echeqs descontados en Acindar no están acá: son deuda financiera.</div>' : '') + '</div>';
+  var puD = echPuente(D.semanas.length, "GRUPO", null); if (puD) h += '<details class="panel"><summary>Echeqs emitidos: cómo cierra el total con el flujo</summary>' + puD + '</details>';
   h += '<div class="panel"><h3>Otros pasivos</h3>' + (S.otros.length ? '<div class="scrollx"><table class="tl"><thead><tr><th>Categoría</th><th>Concepto</th><th>Empresa</th><th class="n">Saldo</th><th class="n">Vence</th><th class="n">Cuota estimada</th><th>Observación</th></tr></thead><tbody>' +
     S.otros.map(function(o){ return '<tr style="' + (o.suma ? "" : "color:var(--ink-3)") + '"><td>' + esc(o.categoria) + '</td><td>' + esc(o.concepto) + '</td><td>' + o.emp + '</td><td class="num"><b>' + mm(o.saldo) + '</b>' + (o.suma ? "" : " (no suma)") + '</td><td class="num">' + (o.vto ? dmy(o.vto) : "—") + '</td><td class="num">' + (o.cuota ? mm(o.cuota) + (o.frecuencia ? " " + esc(o.frecuencia) : "") : "—") + '</td><td class="wrapc">' + esc(o.obs) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
     '<div class="help">Total que suma a la deuda: ' + MM(S.otros_total) + '. Se carga en la planilla de pasivos de Drive (UOCRA, fondo de cese laboral, préstamos y otros).</div>' : '<div class="help">Todavía no se cargó la planilla de pasivos (UOCRA, fondo de cese laboral, etc.).</div>') + '</div>';
@@ -2051,6 +2065,42 @@ function vistaObrasResumen(){
   barrasMeses($("ch_obras"), R.meses);
   volver();
 }
+/* ---------- Echeqs emitidos: cómo cierran el flujo, Deuda y la pestaña Echeqs (v18) ---------- */
+function echPuenteDatos(e){        // importe y cantidad por semana de débito (0 a 12 = semanas 1 a 13; 13 = después de la semana 13) de la empresa elegida: a proveedores («prov») y descontados de Acindar («fin»)
+  e = e || ent;
+  var Q = D.echeqs_puente && D.echeqs_puente[e];
+  if (Q && Q.prov && Q.fin) return Q;
+  var L = D.echeqs;                                                            // servidor anterior a v18: el administrador lo arma con el listado de la pestaña Echeqs
+  if (!L || !L.pendientes) return null;
+  var z = function(){ var a = []; for (var i = 0; i < 14; i++) a.push(0); return a; }, o = {prov: {importe: z(), cantidad: z()}, fin: {importe: z(), cantidad: z()}};
+  L.pendientes.forEach(function(x){
+    if (e !== "GRUPO" && x.emp !== e) return;
+    var k = Math.min(Math.max(x.semana || 14, 1), 14) - 1, t = x.tipo === "Proveedores" ? o.prov : o.fin;
+    t.importe[k] += x.importe; t.cantidad[k] += 1;
+  });
+  return o;
+}
+function echPuente(n, e, titulo){   // titulo: «h4» (por defecto), «h3» o null (sin título, para el plegable de Deuda). Tabla en PESOS (cierra exacto; en millones con un decimal siempre sobra algún 0,1): dentro de las n semanas del cuadro + después = total de Deuda y de la pestaña Echeqs
+  if (!D.meta || !D.meta.echeqs_registro) return "";
+  var Q = echPuenteDatos(e); if (!Q) return "";
+  var cent = function(v){ return Math.round((v || 0) * 100) / 100; }, sum = function(a, d, h){ var t = 0; for (var i = d; i < h; i++) t += a[i] || 0; return cent(t); };
+  var dp = sum(Q.prov.importe, 0, n), df = sum(Q.fin.importe, 0, n), ap = sum(Q.prov.importe, n, 14), af = sum(Q.fin.importe, n, 14);
+  var kd = sum(Q.prov.cantidad, 0, n) + sum(Q.fin.cantidad, 0, n), ka = sum(Q.prov.cantidad, n, 14) + sum(Q.fin.cantidad, n, 14);
+  var w = D.semanas[n - 1], hasta = w ? dm(w.hasta) : "", adm = !!(D.publicacion && D.publicacion.rol === "admin"), todas = n >= D.semanas.length;
+  var v = function(x){ return x ? NF2(x) : "—"; }, cant = function(k){ return ' <span class="help" style="margin:0">· ' + k + (k === 1 ? " echeq" : " echeqs") + '</span>'; };
+  var vinculo = adm && D.echeqs && todas && tab !== "echeqs" && ka > 0 ? '<button class="enlace" style="margin-left:0" data-ech-sem="14" title="Ver estos echeqs en la pestaña Echeqs">Después del ' + hasta + '</button>' : "Después del " + hasta;
+  var tr = function(rot, k, p, f, cls){ return '<tr' + (cls ? ' class="' + cls + '"' : "") + '><td>' + rot + cant(k) + '</td><td class="num">' + v(p) + '</td><td class="num">' + v(f) + '</td><td class="num"><b>' + v(cent(p + f)) + '</b></td></tr>'; };
+  var tit = 'Echeqs emitidos: cómo cierran con ' + (adm ? "el flujo, con Deuda y con la pestaña Echeqs" : "el flujo y con Deuda") + ' · ' + NOMBRE[e || ent];
+  return (titulo === null ? "" : titulo === "h3" ? '<h3>' + tit + '</h3>' : '<h4 style="margin:14px 0 6px">' + tit + '</h4>') +
+    '<div class="scrollx"><table class="tl"><thead><tr><th>En pesos</th><th class="n">Echeqs emitidos a proveedores</th><th class="n">Echeqs descontados (Acindar)</th><th class="n">Total</th></tr></thead><tbody>' +
+    tr("Dentro de las " + n + " semanas (hasta el " + hasta + ")", kd, dp, df) +
+    tr(vinculo + (todas ? " · fuera del flujo" : " · fuera de este cuadro"), ka, ap, af) +
+    tr("Total pendiente de débito", kd + ka, cent(dp + ap), cent(df + af), "tot") + '</tbody></table></div>' +
+    '<div class="help">El primer renglón son las filas «Echeqs emitidos, pendientes de débito» y «Echeqs propios descontados que vencen» del flujo; lo que se debita después no está en el flujo ni mueve su posición bancaria. ' +
+    'Los totales son los de Deuda («Echeqs emitidos» dentro de Proveedores y «Echeqs descontados (Acindar)» en Deuda financiera)' + (adm ? " y el total de la pestaña Echeqs" : "") + '. ' +
+    'Está en pesos para que cierre exacto: en millones con un decimal cada cifra se redondea por separado y una suma puede diferir en 0,1.</div>';
+}
+
 /* ---------- Echeqs emitidos pendientes de débito (solo administración) ---------- */
 var ech = {filtro: "todos", mas: {}, sem: 1};
 function echDiasEntre(a, b){ return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5); }
@@ -2153,6 +2203,7 @@ function vistaEcheqs(){
     kpi("Vencidos sin debitar", MM(imp(venc)), venc.length + " echeqs con fecha anterior a hoy · caen en la semana 1", venc.length ? "warn" : "") +
     kpi("Dudosos por falta de extracto", MM(imp(dud)), dud.length ? dud.length + " echeqs vencidos en días sin extracto del banco" : "ninguno: el banco cubre todos los días", dud.length ? "warn" : "") +
     kpi("Semana 1 del flujo", MM(imp(s1)), s1.length + " echeqs: los vencidos más lo que vence esta semana", "") + '</div></div>';
+  var pu = echPuente(D.semanas.length, ent, "h3"); if (pu) h += '<div class="panel">' + pu + '</div>';
   // los echeqs de la semana (como la pestaña «Echeqs Semana» del Informe Financiero) y, abajo, el resumen de todas las semanas
   var W = echSemanas(L, xs);
   h += echSemanaBloque(L, xs, W);
@@ -2195,7 +2246,7 @@ function pintar(){
   if (tab === "echeqs" && rolAct !== "admin") { tab = "resumen"; marcarTab(); }
   encabezado(); configurarChat();
   if (tab === "gestion") vistaGestion(); else if (tab === "echeqs") vistaEcheqs(); else if (tab === "obras") vistaObras(); else if (tab === "resumen") vistaResumen(); else if (tab === "semanas") vistaSemanas(); else if (tab === "flujo") vistaFlujo(); else if (tab === "cobranzas") vistaCobranzas(); else if (tab === "ventas") vistaVentas(); else if (tab === "garantias") vistaGarantias(); else if (tab === "admin" && D.publicacion.rol === "admin") vistaAdmin(); else if (tab === "admin") { tab = "resumen"; marcarTab(); vistaResumen(); } else vistaDeuda();
-  $("pie").textContent = rolAct === "produccion" ? "FINETIA · Seguimiento de obras · Cifras en pesos con IVA salvo que se indique; “M” = millones." : rolAct === "cobranzas" ? "FINETIA · Panel del equipo de Cobranzas · Lo que guardás entra al flujo en el momento." : "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones · Entre paréntesis, egresos y saldos negativos.";
+  $("pie").textContent = rolAct === "produccion" ? "FINETIA · Seguimiento de obras · Cifras en pesos con IVA salvo que se indique; “M” = millones." : rolAct === "cobranzas" ? "FINETIA · Panel del equipo de Cobranzas · Lo que guardás entra al flujo en el momento." : "Informe generado automáticamente por FINETIA · Solo lectura · Cifras en pesos; “M” = millones, con un decimal: cada cifra se redondea por separado y una suma puede diferir en 0,1 · Entre paréntesis, egresos y saldos negativos.";
 }
 function marcarTab(){ document.querySelectorAll("nav.tabs button").forEach(function(x){ x.setAttribute("aria-selected", x.getAttribute("data-tab") === tab); }); }
 document.querySelectorAll("nav.tabs button").forEach(function(b){
