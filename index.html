@@ -150,6 +150,10 @@ table.ges .etq.bad{color:var(--bad)}table.ges .etq.warn{color:var(--warn)}table.
 .ges-guardar .acc{display:flex;gap:8px}
 .ges-msg{margin-bottom:14px}
 .ges-filtros .seg{display:flex;flex-wrap:wrap}
+#cob_det table.cobs td:first-child,#cob_det table.cobs th:first-child{position:sticky;left:0;z-index:1;background:var(--surface);box-shadow:1px 0 0 var(--line)}
+#cob_det table.cobs thead th:first-child{background:var(--band)}#cob_det table.cobs tr.tot td:first-child{background:var(--surface-2)}
+#cob_det table.cobs td:first-child{white-space:normal;max-width:260px;min-width:120px}
+@media (max-width:600px){#cob_det table.cobs td:first-child{max-width:130px;min-width:100px;font-size:12px}}
 table.fl button.eslink{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 table.fl button.eslink:hover,table.fl button.eslink:focus-visible{color:var(--accent-deep);text-decoration-style:solid}
 table.fl button.plegar{background:none;border:0;padding:0 7px 0 0;margin:0;font:inherit;font-size:11px;color:var(--accent-deep);cursor:pointer;width:1.1em;text-align:left}
@@ -693,11 +697,17 @@ function tablaFlujo(L, n, F, pos0){
   var sec = function(lbl){ return '<tr class="sec"><td colspan="' + (n + 2) + '">' + lbl + '</td></tr>'; };
   var adm = !!(D.publicacion && D.publicacion.rol === "admin" && D.meta.echeqs_registro && D.echeqs && D.echeqs.pendientes);     // el administrador puede abrir los echeqs de cada semana
   var detE = function(lbl, k, c){ return '<tr class="det"><td><span class="dot ' + c + '"></span>' + lbl + '</td>' + L[k].map(function(v, i){ return v ? '<td class="num"><button class="eslink" data-ech-sem="' + D.semanas[i].n + '" title="Ver los echeqs de esta semana">' + par(v) + '</button></td>' : cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
+  var admC = cobAdm();                                                                                                                  // el administrador puede abrir de qué se compone cada importe de las filas de cobranza
+  var detC = function(lbl, k, c){
+    if (!admC) return det(lbl, k, c);
+    var b = function(t, sem, ayuda){ return '<button class="eslink" data-cob-det="' + k + '|' + sem + '" title="' + ayuda + '">' + t + '</button>'; };
+    return '<tr class="det"><td><span class="dot ' + c + '"></span>' + b(lbl, 0, "Ver de qué se compone, semana por semana") + '</td>' + L[k].map(function(v, i){ return v ? '<td class="num">' + b(par(v), D.semanas[i].n, "Ver el detalle de esta semana") + '</td>' : cel(v); }).join("") + '<td class="num">' + b(par(SUMA(L[k])), 0, "Ver todas las semanas") + '</td></tr>';
+  };
   var plegable = function(lbl, k){ var ab = provAbierto; return '<tr class="det prov"><td><button class="plegar" data-plegar="prov" aria-expanded="' + ab + '" title="Ver de qué se compone">' + (ab ? "▾" : "▸") + '</button><b>' + lbl + '</b></td>' + L[k].map(function(v){ return cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
   var hija = function(f, lbl, k, c){ return '<tr class="det hij"><td><span class="dot ' + c + '"></span>' + lbl + '</td>' + L[k].map(function(v, i){ return v ? '<td class="num">' + (f ? '<button class="eslink" data-ech-sem="' + D.semanas[i].n + '" title="Ver los echeqs de esta semana">' + par(v) + '</button>' : par(v)) + '</td>' : cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
   var h = '<div class="legend"><span><span class="dot c"></span>Comprometido: ya registrado (facturas, cheques, planes)</span><span><span class="dot"></span>Estimado: ritmo real de pagos y cobranzas de los extractos, o calendario del informe</span></div><div class="scrollx"><table class="fl' + (provAbierto ? " pa" : "") + '">' + cab + '<tbody>';
   h += '<tr class="ini"><td>Saldo bancario inicial (todos los bancos)</td><td class="num">' + par(pos0) + '</td>' + new Array(n + 1).join("<td></td>") + '</tr>';
-  h += sec("Ingresos") + det("Cobranzas de clientes (cuentas a cobrar)", "cob_clientes", "c") + det("Echeqs de clientes en cartera", "cob_echeq", "c") + det("Cobranzas de ventas nuevas", "cob_nuevas", "") + sub("Total ingresos", "ingresos");
+  h += sec("Ingresos") + detC("Cobranzas de clientes (cuentas a cobrar)", "cob_clientes", "c") + detC("Echeqs de clientes en cartera", "cob_echeq", "c") + detC("Cobranzas de ventas nuevas", "cob_nuevas", "") + sub("Total ingresos", "ingresos");
   h += sec("Egresos operativos") + plegable("Proveedores", "prov") + hija(adm, D.meta.echeqs_registro ? "Echeqs emitidos, pendientes de débito" : "Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + hija(false, D.meta.echeqs_registro ? (D.meta.ritmo_proveedores && D.meta.ritmo_proveedores.programacion ? "Facturas a pagar, escalonadas (transferencia o echeq a emitir)" : "Facturas a pagar (transferencia o echeq a emitir)") : "Transferencias y cuenta corriente", "pag_transf", "c") + hija(false, "Ritmo habitual estimado (completa lo que todavía no está registrado)", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
   h += sec("Egresos fiscales") + det("Impuestos y cargas sociales", "impuestos", "") + det("Planes de ARCA (regularización de cuotas)", "arca", "c") + sub("Total egresos fiscales", "fiscal");
   h += sec("Egresos financieros") + det("Cuotas de préstamos bancarios", "fin_prestamos", "c") + det("Echeqs propios descontados que vencen", "fin_echeqs", "c") + det("Intereses bancarios, comisiones y débitos", "financieros", "") + sub("Total egresos financieros", "financ");
@@ -705,7 +715,8 @@ function tablaFlujo(L, n, F, pos0){
   h += '<tr class="sub"><td>Saldo bancario final (posición)</td>' + L.posicion.map(function(v){ return cel(v, v < -F.acuerdo ? "bajo" : ""); }).join("") + '<td></td></tr>';
   h += '<tr><td>Margen disponible sobre acuerdos</td>' + L.margen.map(function(v){ return cel(v); }).join("") + '<td></td></tr>';
   h += '<tr><td>Certeza: parte comprometida del movimiento</td>' + L.certeza.map(function(v){ return '<td class="num"><span class="cert"><i><b style="width:' + Math.round((v || 0) * 100) + '%"></b></i>' + pct(v) + '</span></td>'; }).join("") + '<td></td></tr>';
-  return h + '</tbody></table></div>' + (adm ? '<div class="help">Desplegá «Proveedores» (▸) y tocá un importe de «Echeqs emitidos, pendientes de débito» para ver qué echeqs lo componen en esa semana.</div>' : "");
+  return h + '</tbody></table></div>' + (admC ? '<div class="help">Tocá un importe de «Cobranzas de clientes», «Echeqs de clientes en cartera» o «Cobranzas de ventas nuevas» (o el nombre de la fila) para ver de qué facturas, echeqs y ventas sale, semana por semana.</div>' : "") +
+    (adm ? '<div class="help">Desplegá «Proveedores» (▸) y tocá un importe de «Echeqs emitidos, pendientes de débito» para ver qué echeqs lo componen en esa semana.</div>' : "");
 }
 function notaProveedores(){
   // Al pie de la tabla: cómo se arma «Proveedores» (para que no parezca que sus tres líneas se suman dos veces) y cuánto se pagó de verdad por mes, al lado de lo que proyecta el flujo
@@ -858,7 +869,7 @@ function vistaSemanas(){
     kpi("Resultado · 4 semanas", MM(SUMA(L.resultado)), "ingresos menos egresos", SUMA(L.resultado) < 0 ? "bad" : "ok") + kpi("Saldo al cierre de la semana 4", MM(L.posicion[n - 1]), "mínimo del período " + MM(mn), mn < -F.acuerdo ? "bad" : "warn") + '</div>';
   h += '<div class="grid2"><div class="panel"><h3>Posición bancaria al cierre de cada semana</h3><div class="chart" id="ch_pos"></div></div><div class="panel"><h3>Ingresos y egresos</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div></div>';
   h += '<div class="panel" style="margin-top:16px"><h3>Cash flow de las próximas 4 semanas · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3>' + tablaFlujo(L, n, F, pos0) +
-    '<div class="help">Los egresos no cambian con el cumplimiento de cobranza. ' + (SUMA(L.nof) ? "Sueldos y NOF siguen el calendario de pagos del informe: mensuales, jornales y NOF el 4.º día hábil de cada mes y de cada quincena, y el SAC junto con la quincena de diciembre y el 30/06. " : "Sueldos y NOF se estiman con el ritmo real de pagos de las últimas 13 semanas según los extractos bancarios. ") + 'Los pagos a proveedores combinan la deuda registrada con el ritmo real de las últimas 13 semanas (' + (D.meta.ventana_ritmo ? dm(D.meta.ventana_ritmo[0]) + " al " + dm(D.meta.ventana_ritmo[1]) : "") + ') según los extractos bancarios.</div>' + notaProveedores() + '</div>';
+    '<div class="help">Los egresos no cambian con el cumplimiento de cobranza. ' + (SUMA(L.nof) ? "Sueldos y NOF siguen el calendario de pagos del informe: mensuales, jornales y NOF el 4.º día hábil de cada mes y de cada quincena, y el SAC junto con la quincena de diciembre y el 30/06. " : "Sueldos y NOF se estiman con el ritmo real de pagos de las últimas 13 semanas según los extractos bancarios. ") + 'Los pagos a proveedores combinan la deuda registrada con el ritmo real de las últimas 13 semanas (' + (D.meta.ventana_ritmo ? dm(D.meta.ventana_ritmo[0]) + " al " + dm(D.meta.ventana_ritmo[1]) : "") + ') según los extractos bancarios.</div>' + notaProveedores() + '</div>' + panelCobDetalle(L, n);
   $("vista").innerHTML = h;
   lineaPosicion($("ch_pos"), L.posicion, F.acuerdo, D.semanas.slice(0, n));
   barrasSemanales($("ch_bar"), L.ingresos, L.egresos, D.semanas.slice(0, n));
@@ -872,6 +883,7 @@ function vistaFlujo(){
   h += '<div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3><div class="chart" id="ch_pos"></div></div>';
   h += '<div class="panel"><h3>Ingresos y egresos por semana · ' + NOMBRE[ent] + '</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div>';
   h += '<div class="panel"><h3>Flujo de caja trimestral · ' + NOMBRE[ent] + '</h3>' + tablaFlujo(L, n, F, F.pos0) + notaProveedores() + '</div>';
+  h += panelCobDetalle(L, n);
   h += '<div class="panel"><h3>¿Qué pasa si se cobra menos?</h3><div class="scrollx"><table><thead><tr><th>Cumplimiento</th><th>Punto más bajo</th><th>Semana</th><th>Faltan sobre acuerdos</th></tr></thead><tbody>' +
     D.escenarios.map(function(e){ var p = e.emp[ent].posicion, m = Math.min.apply(null, p), f = m < -F.acuerdo ? -(m + F.acuerdo) : 0;
       return '<tr' + (Math.abs(e.cumpl - cumpl) < 1e-9 ? ' class="sel"' : "") + '><td>' + pct(e.cumpl) + '</td><td class="num">' + par(m) + '</td><td class="num">' + (p.indexOf(m) + 1) + '</td><td class="num' + (f > 0 ? " neg" : "") + '">' + (f > 0 ? par(f) : "—") + '</td></tr>'; }).join("") + '</tbody></table></div></div>';
@@ -911,6 +923,187 @@ function vistaCobranzas(){
     (D.meta.cobranzas_actualizado ? ' Última actualización del equipo de Cobranzas: ' + esc(fechaHora(D.meta.cobranzas_actualizado.ts)) + '.' : '') + '</div></div>';
   $("vista").innerHTML = h;
 }
+/* ---------- De dónde sale la cobranza de cada semana (solo administrador) ----------
+   El servidor manda, partida por partida, lo que el motor pone en las tres filas de ingresos (D.cobranza_detalle). Los importes vienen sin el cumplimiento: acá se
+   aplica el elegido con la misma cuenta del motor (lo que no tiene fecha real × cumplimiento × retención de IVA), de modo que cada semana suma exactamente lo de la tabla. */
+var COB_TIT = {cob_clientes: "Cobranzas de clientes (cuentas a cobrar)", cob_echeq: "Echeqs de clientes en cartera", cob_nuevas: "Cobranzas de ventas nuevas"};
+var COB_CORTO = {cob_clientes: "Facturas de clientes", cob_echeq: "Echeqs de clientes", cob_nuevas: "Ventas nuevas"};
+var COB_CLASE = {aesa: "AESA", resto: "Resto de clientes"};
+var cobDet = {tipo: null, sem: 0};
+function cobAdm(){ return !!(D && D.publicacion && D.publicacion.rol === "admin" && D.cobranza_detalle && D.cobranza_detalle.facturas); }
+function cobMonto(x, tipo){
+  if (tipo === "cob_echeq") return x.imp;
+  var R = D.cobranza_detalle.retencion;
+  return x.imp * (x.real ? 1 : cumpl) * (x.ret && R ? R.factor[x.emp] : 1);
+}
+function cobPartidas(tipo){
+  var C = D.cobranza_detalle, en = function(x){ return ent === "GRUPO" || x.emp === ent; };
+  if (tipo === "cob_clientes") return C.facturas.filter(en);
+  if (tipo === "cob_echeq") return C.echeqs.filter(en);
+  return C.nuevas.fechados.filter(en).map(function(x){ return {k: "f", emp: x.emp, s: x.s, imp: x.imp, ret: x.ret, fecha: x.fecha, clase: x.clase, mes: x.mes}; })
+    .concat(C.nuevas.ritmo.filter(en).map(function(x){ return {k: "r", emp: x.emp, s: x.s, imp: x.imp, ret: x.ret, clase: x.clase, frac: x.frac}; }));
+}
+function cobTotales(ps, tipo, n){
+  var v = [], i; for (i = 0; i < n; i++) v.push(0);
+  ps.forEach(function(x){ if (x.s >= 1 && x.s <= n) v[x.s - 1] += cobMonto(x, tipo); });
+  return v;
+}
+function cobMes(ym){ var m = (D.cobranza_detalle.nuevas.meses || []).filter(function(z){ return z.ym === ym; })[0]; return m && m.nombre ? m.nombre : (ym || "sin mes"); }
+function cobComo(f){
+  var b = f.base;
+  if (b === "comprometida") return '<span class="etq ok">Fecha comprometida</span> por Cobranzas';
+  if (b === "planilla") return '<span class="etq ok">Fecha real</span> de la planilla de cobros';
+  if (b === "fuera") return '<span class="etq bad">En disputa</span> fuera de las 13 semanas';
+  if (b === "vencida") return '<span class="etq warn">Vencida sin fecha</span> se cuenta en la semana 2';
+  if (b === "plazo") return '<span class="etq gris">Plazo real</span> ' + f.plazo.dias + ' días desde la emisión (' + (f.plazo.base === "cliente" ? "historia del cliente" : "promedio de su grupo de clientes") + ')';
+  if (b === "regla") return '<span class="etq gris">Regla</span> ' + esc(f.regla);
+  return '<span class="etq gris">Vencimiento</span> según su fecha de vencimiento';
+}
+function cobMatriz(ps, tipo, n, clave, rotulo, tope, otros){
+  var m = {}, ks = [], i;
+  ps.forEach(function(x){
+    if (x.s < 1 || x.s > n) return;
+    var k = clave(x), r = m[k];
+    if (!r) { r = m[k] = {rot: rotulo(x), v: [], t: 0}; for (i = 0; i < n; i++) r.v.push(0); ks.push(k); }
+    var a = cobMonto(x, tipo); r.v[x.s - 1] += a; r.t += a;
+  });
+  var rows = ks.map(function(k){ return m[k]; }).sort(function(a, b){ return b.t - a.t; });
+  if (tope && rows.length > tope + 1) {
+    var rs = {rot: "Otros " + (rows.length - tope) + " " + otros, v: [], t: 0};
+    for (i = 0; i < n; i++) rs.v.push(0);
+    rows.slice(tope).forEach(function(r){ r.v.forEach(function(a, j){ rs.v[j] += a; }); rs.t += r.t; });
+    rows = rows.slice(0, tope).concat([rs]);
+  }
+  return rows;
+}
+function cobTablaMatriz(rows, n, tot, rotCol){
+  var h = '<div class="scrollx"><table class="tl ges cobs"><thead><tr><th>' + rotCol + '</th>' + D.semanas.slice(0, n).map(function(w){ return '<th class="n">Sem. ' + w.n + '<small>' + dm(w.desde) + '–' + dm(w.hasta) + '</small></th>'; }).join("") + '<th class="n">Total<small>' + n + ' sem.</small></th></tr></thead><tbody>';
+  rows.forEach(function(r){ h += '<tr><td>' + esc(r.rot) + '</td>' + r.v.map(function(a){ return '<td class="num">' + (a ? par(a) : "") + '</td>'; }).join("") + '<td class="num"><b>' + par(r.t) + '</b></td></tr>'; });
+  return h + '<tr class="tot"><td>Total · igual que la fila de la tabla</td>' + tot.map(function(a){ return '<td class="num">' + par(a) + '</td>'; }).join("") + '<td class="num">' + par(SUMA(tot)) + '</td></tr></tbody></table></div>' +
+    '<div class="help">En millones de $. Tocá una semana arriba para ver una por una las partidas que la componen.</div>';
+}
+function cobVacio(tipo, ps, donde){
+  var msg = "No hay " + (tipo === "cob_clientes" ? "facturas" : tipo === "cob_echeq" ? "echeqs" : "cobranzas de ventas nuevas") + " con cobro previsto " + donde + ".";
+  if (tipo === "cob_nuevas") {
+    var fs = ps.filter(function(x){ return x.k === "f"; }).sort(function(a, b){ return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0; }), N = D.cobranza_detalle.nuevas;
+    if (fs.length) msg += " La primera cobranza de ventas nuevas está prevista para el " + dmy(fs[0].fecha) + (fs[0].s <= 13 ? " (semana " + fs[0].s + ")" : " (después de la semana 13)") + ": se factura recién desde el " + dmy(N.desde || D.cobranza_detalle.hoy) + " y se cobra a " +
+      (N.plazo ? N.plazo.resto + " días (resto de clientes) o " + N.plazo.aesa + " días (AESA)" : "su plazo") + ".";
+  }
+  return '<div class="help" style="margin-top:0">' + esc(msg) + '</div>';
+}
+function cobVistaTodas(ps, tipo, n, tot){
+  if (!ps.some(function(x){ return x.s >= 1 && x.s <= n; })) return cobVacio(tipo, ps, "en estas " + n + " semanas");
+  if (tipo === "cob_clientes") return cobTablaMatriz(cobMatriz(ps, tipo, n, function(x){ return x.cliente; }, function(x){ return x.cliente; }, 40, "clientes"), n, tot, "Cliente");
+  if (tipo === "cob_echeq") return cobTablaMatriz(cobMatriz(ps, tipo, n, function(x){ return x.emisor; }, function(x){ return x.emisor || "(sin emisor)"; }, 40, "emisores"), n, tot, "Emisor del echeq");
+  return cobTablaMatriz(cobMatriz(ps, tipo, n, function(x){ return x.k === "f" ? "f|" + x.mes + "|" + x.clase : "r|" + x.clase; },
+    function(x){ return x.k === "f" ? "Ventas de " + cobMes(x.mes).toLowerCase() + " · " + COB_CLASE[x.clase] : "Ritmo de cobranzas de los bancos · " + COB_CLASE[x.clase] + " (meses sin pronóstico)"; }, 0, ""), n, tot, "Origen");
+}
+function cobFilasFacturas(xs, sem){
+  var por = {}; xs.forEach(function(x){ por[x.cliente] = (por[x.cliente] || 0) + cobMonto(x, "cob_clientes"); });
+  xs = xs.slice().sort(function(a, b){ return (por[b.cliente] - por[a.cliente]) || (a.cliente < b.cliente ? -1 : a.cliente > b.cliente ? 1 : 0) || (b.imp - a.imp); });
+  var dist = sem !== 14 && xs.some(function(x){ return Math.abs(cobMonto(x, "cob_clientes") - x.imp) > 0.005; });
+  var fila = function(x){
+    return '<tr><td>' + esc(x.cliente) + '</td><td>' + x.emp + '</td><td>' + esc(x.comprobante) + '</td><td>' + dmy(x.emision) + '</td><td>' + dmy(x.pactado) + '</td><td>' + (x.fecha ? dmy(x.fecha) : "—") + '</td><td style="white-space:normal;min-width:220px">' + cobComo(x) +
+      '</td><td class="num">' + NF2(x.imp) + '</td>' + (dist ? '<td class="num">' + NF2(cobMonto(x, "cob_clientes")) + '</td>' : "") + '</tr>';
+  };
+  var ti = SUMA(xs.map(function(x){ return x.imp; })), tf = SUMA(xs.map(function(x){ return cobMonto(x, "cob_clientes"); }));
+  return '<div class="scrollx"><table class="tl ges cobs"><thead><tr><th>Cliente</th><th>Emp.</th><th>Comprobante</th><th>Emisión</th><th>Venc. pactado</th><th>Cobro previsto</th><th>Cómo se definió</th><th class="n">Importe de la factura</th>' + (dist ? '<th class="n">Se cuenta en el flujo</th>' : "") + '</tr></thead><tbody>' +
+    xs.map(fila).join("") + '<tr class="tot"><td colspan="7">' + (sem === 14 ? "Total fuera de las 13 semanas" : "Total de la semana") + '</td><td class="num">' + NF2(ti) + '</td>' + (dist ? '<td class="num">' + NF2(tf) + '</td>' : "") + '</tr></tbody></table></div>';
+}
+function cobFilasEcheqs(xs, sem){
+  var hoy = D.cobranza_detalle.hoy;
+  xs = xs.slice().sort(function(a, b){ return a.venc < b.venc ? -1 : a.venc > b.venc ? 1 : b.imp - a.imp; });
+  return '<div class="scrollx"><table class="tl ges cobs"><thead><tr><th>Emisor del echeq</th><th>Emp.</th><th>Vence</th><th>Situación</th><th class="n">Importe</th></tr></thead><tbody>' +
+    xs.map(function(x){ return '<tr><td>' + esc(x.emisor || "(sin emisor)") + '</td><td>' + x.emp + '</td><td>' + dmy(x.venc) + '</td><td>' + (x.venc < hoy ? '<span class="etq warn">Vencido</span> todavía en cartera: entra en la semana 1' : "A cobrar en su fecha") + '</td><td class="num">' + NF2(x.imp) + '</td></tr>'; }).join("") +
+    '<tr class="tot"><td colspan="4">' + (sem === 14 ? "Total fuera de las 13 semanas" : "Total de la semana") + '</td><td class="num">' + NF2(SUMA(xs.map(function(x){ return x.imp; }))) + '</td></tr></tbody></table></div>';
+}
+function cobFilasNuevas(xs, sem){
+  var g = {}, ks = [];
+  xs.forEach(function(x){
+    var k = x.k === "f" ? "f|" + x.fecha + "|" + x.mes + "|" + x.clase : "r|" + x.clase, r = g[k];
+    if (!r) { r = g[k] = {k: x.k, fecha: x.fecha, mes: x.mes, clase: x.clase, imp: 0, flu: 0, HC: 0, PM: 0, frac: x.frac}; ks.push(k); }
+    r.imp += x.imp; r.flu += cobMonto(x, "cob_nuevas"); r[x.emp] += cobMonto(x, "cob_nuevas");
+  });
+  var rows = ks.map(function(k){ return g[k]; }).sort(function(a, b){ return a.k === b.k ? ((a.fecha || "") < (b.fecha || "") ? -1 : (a.fecha || "") > (b.fecha || "") ? 1 : 0) : (a.k === "f" ? -1 : 1); });
+  var dist = sem !== 14 && rows.some(function(r){ return Math.abs(r.flu - r.imp) > 0.005; });
+  var fila = function(r){
+    var emp = ent === "GRUPO" && r.HC && r.PM ? '<div class="help" style="margin:0">HC ' + mm(r.HC) + ' · PM ' + mm(r.PM) + '</div>' : "";
+    return '<tr><td style="white-space:normal;min-width:260px">' + (r.k === "f" ? 'Ventas de <b>' + esc(cobMes(r.mes).toLowerCase()) + '</b> · ' + COB_CLASE[r.clase] + '<div class="help" style="margin:0">Se cobran el ' + dmy(r.fecha) + '</div>' :
+      'Ritmo de cobranzas de los bancos · ' + COB_CLASE[r.clase] + '<div class="help" style="margin:0">' + (r.frac < 1 ? 'Se cuenta el ' + pct(r.frac) + ' de la semana: la parte cuya venta de origen cae en un mes sin pronóstico' : 'Se cuenta la semana completa') + '</div>') + emp + '</td><td class="num">' + NF2(r.imp) + '</td>' + (dist ? '<td class="num">' + NF2(r.flu) + '</td>' : "") + '</tr>';
+  };
+  return '<div class="scrollx"><table class="tl ges"><thead><tr><th>Qué se cobra</th><th class="n">Importe</th>' + (dist ? '<th class="n">Se cuenta en el flujo</th>' : "") + '</tr></thead><tbody>' + rows.map(fila).join("") +
+    '<tr class="tot"><td>' + (sem === 14 ? "Total fuera de las 13 semanas" : "Total de la semana") + '</td><td class="num">' + NF2(SUMA(rows.map(function(r){ return r.imp; }))) + '</td>' + (dist ? '<td class="num">' + NF2(SUMA(rows.map(function(r){ return r.flu; }))) + '</td>' : "") + '</tr></tbody></table></div>';
+}
+function cobVistaSemana(ps, tipo, sem){
+  var xs = ps.filter(function(x){ return x.s === sem; }), w = sem === 14 ? null : D.semanas[sem - 1];
+  var tot = SUMA(xs.map(function(x){ return sem === 14 ? x.imp : cobMonto(x, tipo); })), rot = sem === 14 ? "Después de la semana 13" : "Semana " + sem + " · " + dm(w.desde) + "–" + dm(w.hasta) + (sem === 1 ? " (la de hoy)" : "");
+  var cuenta = function(){
+    if (tipo === "cob_clientes") { var cl = {}; xs.forEach(function(x){ cl[x.cliente] = 1; }); return xs.length + (xs.length === 1 ? " factura" : " facturas") + " de " + Object.keys(cl).length + (Object.keys(cl).length === 1 ? " cliente" : " clientes"); }
+    if (tipo === "cob_echeq") return xs.length + (xs.length === 1 ? " echeq" : " echeqs");
+    return xs.length + (xs.length === 1 ? " partida" : " partidas");
+  };
+  var h = '<div style="margin:6px 0 8px"><b>' + rot + '</b> · ' + cuenta() + ' · <b>' + MM(tot) + '</b>' + (sem === 14 && xs.length ? ' <span class="help" style="margin:0">(importe de lo previsto; no entra en el flujo de 13 semanas)</span>' : "") + '</div>';
+  if (!xs.length) return h + cobVacio(tipo, ps, sem === 14 ? "después de la semana 13" : "en esta semana");
+  return h + (tipo === "cob_clientes" ? cobFilasFacturas(xs, sem) : tipo === "cob_echeq" ? cobFilasEcheqs(xs, sem) : cobFilasNuevas(xs, sem));
+}
+function cobExplica(tipo){
+  var C = D.cobranza_detalle, R = C.retencion, h = '<h4 style="margin:16px 0 6px">Cómo se define</h4><ul class="mirar">';
+  var cu = Math.abs(cumpl - 1) > 1e-9 ? "el " + pct(cumpl) + " (el cumplimiento elegido)" : "el 100% (cumplimiento 100%)";
+  var ret = function(){
+    if (!R) return "";
+    var f = [], vistos = {};
+    ["HC", "PM"].forEach(function(e){ if (R.desde && R.desde[e]) { var p = Math.round((1 - R.factor[e]) * 1000) / 10; f.push(e + " desde el " + dmy(R.desde[e])); vistos[p] = 1; } });
+    var ps = Object.keys(vistos); if (!f.length || !ps.length || ps[0] === "0") return "";
+    return '<li class="w"><b>Retención de IVA</b>Vence el certificado de no retención (' + f.join(" · ") + '): las cobranzas previstas desde esa fecha se cuentan netas de retención (el cliente retiene el ' + NF1.format(+ps[0]).replace(/,0$/, "") + '% del importe facturado).</li>';
+  };
+  if (tipo === "cob_clientes") {
+    h += '<li><b>Con fecha comprometida</b>Si Cobranzas cargó la fecha en que el cliente va a pagar (o la factura tiene fecha real en la planilla), manda esa fecha y se cuenta la factura completa, sin descuento por cumplimiento.</li>' +
+      '<li><b>Sin fecha: vencimiento esperado</b>Se toma la emisión más lo que el cliente tarda realmente en pagar (su historia en Tango; si no la tiene, el promedio de su grupo de clientes, que nunca adelanta una factura antes de su vencimiento pactado). Si cae en fin de semana pasa al día hábil siguiente. De estas facturas se cuenta ' + cu + '.</li>' +
+      '<li class="w"><b>Vencida sin fecha</b>No hay forma de saber cuándo paga: se supone que se cobra la semana siguiente a la del corte (semana 2) y también se cuenta con el cumplimiento elegido.</li>' +
+      '<li><b>En disputa o demorada</b>Si Cobranzas la marcó así, queda fuera de las 13 semanas (aparece en «Después»).</li>' +
+      '<li><b>Ya cobrada</b>Si Tango o el banco ya la dan por cobrada no se cuenta: el saldo bancario inicial ya tiene esa plata.</li>' + ret() +
+      '</ul><div class="help">Para cambiar la fecha de una factura, cargala en «Gestión de cobranzas»: el flujo se recalcula en el momento. <button class="eslink" data-ir="gestion" style="background:none;border:0;padding:0;font:inherit;color:var(--accent-deep);cursor:pointer;text-decoration:underline">Ir a Gestión de cobranzas</button></div>';
+  } else if (tipo === "cob_echeq") {
+    h += '<li><b>En su fecha de vencimiento</b>Son los echeqs de clientes que Tesorería tiene en cartera (según el Excel de saldos). Cada uno entra completo en la semana de su fecha de vencimiento; los que ya vencieron y siguen en cartera figuran en la semana 1.</li>' +
+      '<li><b>Sin descuentos</b>No dependen del cumplimiento de cobranza ni llevan retención: ya están en nuestro poder.</li></ul>';
+  } else {
+    var N = C.nuevas, plz = N.plazo || {}, rp = N.reparto || {}, fch = N.fechados.map(function(x){ return x.fecha; }).sort();
+    var pc = function(c, e){ return rp[c] && rp[c][e] !== undefined ? Math.round(rp[c][e] * 100) + "%" : "—"; };
+    if (N.modo === "pronostico") {
+      h += '<li><b>Pronóstico de ventas de Comercial</b>Es lo que todavía no se facturó: para cada mes con pronóstico se proyectan los días hábiles que faltan para terminar de facturar, al ritmo diario del pronóstico y con IVA.</li>' +
+        '<li><b>Plazo de cobro</b>Cada venta se cobra ' + (plz.resto || "—") + ' días después de facturada (resto de clientes) y ' + (plz.aesa || "—") + ' días después (AESA)' + (fch.length ? ', por eso la primera cobranza de ventas nuevas recién está prevista para el ' + dmy(fch[0]) : "") + '.</li>' +
+        '<li><b>Reparto entre empresas</b>El importe es del grupo y se reparte según lo que cada empresa cobra en los bancos: resto de clientes HC ' + pc("resto", "HC") + ' · PM ' + pc("resto", "PM") + '; AESA HC ' + pc("aesa", "HC") + ' · PM ' + pc("aesa", "PM") + '.</li>' +
+        '<li><b>Meses sin pronóstico</b>Sigue valiendo el ritmo de cobranzas de los bancos (promedio de las últimas 13 semanas) para la parte de cada semana cuya venta de origen cae en un mes sin pronóstico.</li>' +
+        '<li><b>Cumplimiento</b>Se cuenta ' + cu + ' de estas cobranzas, porque todavía no tienen fecha real.</li>' + ret() + '</ul>';
+      var ms = (N.meses || []).filter(function(m){ return m.falta !== undefined; });
+      if (ms.length) h += '<h4 style="margin:14px 0 6px">Cómo se arma cada mes del pronóstico</h4><div class="scrollx"><table class="tl ges"><thead><tr><th>Mes de la venta</th><th>Clase</th><th class="n">Ritmo diario</th><th class="n">Días a facturar</th><th>Se factura</th><th>Se cobra</th><th class="n">Falta facturar (con IVA)</th></tr></thead><tbody>' +
+        ms.map(function(m){ return '<tr><td>' + esc(m.nombre || m.ym) + '</td><td>' + (COB_CLASE[m.clase] || m.clase) + '</td><td class="num">' + MM(m.ritmo_diario) + '</td><td class="num">' + (m.dias_por_facturar !== undefined ? m.dias_por_facturar : "—") + '</td><td>' + (m.factura_desde ? dm(m.factura_desde) + "–" + dm(m.factura_hasta) : "—") + '</td><td>' + (m.cobro_desde ? dm(m.cobro_desde) + "–" + dm(m.cobro_hasta) : "—") + '</td><td class="num"><b>' + MM(m.falta) + '</b></td></tr>'; }).join("") +
+        '</tbody></table></div><div class="help">Importes del grupo (con IVA): se reparten entre HC y PM como se explica arriba.</div>';
+    } else {
+      h += '<li><b>Sin pronóstico de ventas cargado</b>Se usa el ritmo de cobranzas de los bancos (promedio de las últimas 13 semanas): el resto de clientes desde la semana 3 y AESA desde la semana 5, que es lo que tardan en pagar.</li>' +
+        '<li><b>Cumplimiento</b>Se cuenta ' + cu + ' de estas cobranzas.</li>' + ret() + '</ul>';
+    }
+  }
+  return h;
+}
+function panelCobDetalle(L, n){
+  if (!cobAdm() || !cobDet.tipo) return "";
+  var C = D.cobranza_detalle, tipo = cobDet.tipo, sem = cobDet.sem, i;
+  if (sem === 14 ? n < 13 : sem > n) sem = 0;
+  var ps = cobPartidas(tipo), tot = cobTotales(ps, tipo, n), dif = 0;
+  for (i = 0; i < n; i++) dif = Math.max(dif, Math.abs(tot[i] - L[tipo][i]));
+  var despues = SUMA(ps.filter(function(x){ return x.s === 14; }).map(function(x){ return x.imp; })), hayDespues = n >= 13 && ps.some(function(x){ return x.s === 14; });
+  var h = '<div class="panel" id="cob_det"><div class="ges-cab"><div style="flex:1 1 340px"><h3 style="margin-bottom:3px">De dónde sale la cobranza · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3><div class="help" style="margin:0">Cada importe de las filas de ingresos del flujo, partida por partida y con las mismas reglas del cálculo. Cambia con la empresa y con el cumplimiento que elijas arriba.</div></div><div class="acc"><button class="btn" data-cob-x="1">Cerrar</button></div></div>';
+  if (!C.cierra || dif > 1) h += '<div class="banner bad">El detalle no coincide con la tabla (diferencia ' + MM(Math.max(dif, C.dif || 0)) + '). No lo tomes como cifra final: avisá al equipo de FINETIA.</div>';
+  h += '<div class="ges-filtros"><div class="seg" role="group" aria-label="Fila del flujo">' + ["cob_clientes", "cob_echeq", "cob_nuevas"].map(function(k){ return '<button data-cob-tipo="' + k + '" aria-pressed="' + (k === tipo) + '">' + COB_CORTO[k] + '</button>'; }).join("") + '</div></div>' +
+    '<div class="ges-filtros"><div class="seg" role="group" aria-label="Semana"><button data-cob-sem="0" aria-pressed="' + (sem === 0) + '">Todas · ' + n + ' sem.</button>' +
+    tot.map(function(v, j){ return '<button data-cob-sem="' + (j + 1) + '" aria-pressed="' + (sem === j + 1) + '">Sem. ' + (j + 1) + ' · ' + par(v) + '</button>'; }).join("") +
+    (hayDespues ? '<button data-cob-sem="14" aria-pressed="' + (sem === 14) + '">Después · ' + par(despues) + '</button>' : "") + '</div></div>' +
+    '<div style="margin:2px 0 8px"><b>' + COB_TIT[tipo] + '</b> · ' + (sem === 0 ? MM(SUMA(tot)) + ' en ' + n + ' semanas' : "semana a semana") + '</div>';
+  h += sem === 0 ? cobVistaTodas(ps, tipo, n, tot) : cobVistaSemana(ps, tipo, sem);
+  return h + cobExplica(tipo) + '</div>';
+}
+function cobAbrir(tipo, sem){ cobDet = {tipo: tipo, sem: sem}; pintar(); var p = $("cob_det"); if (p) p.scrollIntoView({behavior: "smooth", block: "start"}); }
 /* ---------- Gestión de cobranzas (equipo de Cobranzas y administrador) ---------- */
 var ges = {ed: {}, filtro: "todas", q: "", cargando: false, msg: null, ent: "GRUPO", ocupado: false};
 var PESOS = function(v){ return "$ " + NF0.format(Math.round(v || 0)); };
@@ -2004,6 +2197,10 @@ $("vista").addEventListener("click", function(ev){
     b.parentNode.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", String(x.getAttribute("data-dec") === a.decision)); });
     revEstado();
   }
+  else if (b.hasAttribute("data-cob-det")) { var zc = b.getAttribute("data-cob-det").split("|"); cobAbrir(zc[0], +zc[1]); }
+  else if (b.hasAttribute("data-cob-tipo")) { cobDet.tipo = b.getAttribute("data-cob-tipo"); pintar(); }
+  else if (b.hasAttribute("data-cob-sem")) { cobDet.sem = +b.getAttribute("data-cob-sem"); pintar(); }
+  else if (b.hasAttribute("data-cob-x")) { cobDet.tipo = null; pintar(); }
   else if (b.hasAttribute("data-efil")) { ech.filtro = b.getAttribute("data-efil"); pintar(); }
   else if (b.hasAttribute("data-esem")) { ech.sem = +b.getAttribute("data-esem"); pintar(); if (b.hasAttribute("data-esem-t")) { var es = $("ech_semana"); if (es) es.scrollIntoView({behavior: "smooth", block: "start"}); } }
   else if (b.hasAttribute("data-ech-sem")) { ech.sem = +b.getAttribute("data-ech-sem"); tab = "echeqs"; marcarTab(); store.set("gp_tab", tab); pintar(); window.scrollTo(0, 0); }
