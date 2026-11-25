@@ -156,6 +156,14 @@ table.ges .etq.bad{color:var(--bad)}table.ges .etq.warn{color:var(--warn)}table.
 @media (max-width:600px){#cob_det table.cobs td:first-child{max-width:130px;min-width:100px;font-size:12px}}
 table.fl button.eslink{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 table.fl button.eslink:hover,table.fl button.eslink:focus-visible{color:var(--accent-deep);text-decoration-style:solid}
+.cob-entrada{display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:0 0 12px;padding:10px 14px;border:1px solid var(--line-2);border-left:4px solid var(--accent);border-radius:6px;background:var(--accent-bg);font-size:13px}
+.cob-entrada .cob-tit{display:flex;flex-direction:column;gap:1px;flex:1 1 260px}
+.cob-entrada .cob-tit small{color:var(--ink-3);font-size:12px}
+.cob-entrada .seg{display:flex;flex-wrap:wrap}
+.cob-entrada .seg button{padding:8px 14px;font-size:13px}
+.cob-entrada .seg button:hover,.cob-entrada .seg button:focus-visible{background:var(--accent);color:#fff}
+@media (max-width:600px){.cob-entrada .seg{width:100%}.cob-entrada .seg button{flex:1 1 auto;padding:9px 8px;font-size:12px}}
+@media print{.cob-entrada,.cob-falta{display:none!important}}
 table.fl button.plegar{background:none;border:0;padding:0 7px 0 0;margin:0;font:inherit;font-size:11px;color:var(--accent-deep);cursor:pointer;width:1.1em;text-align:left}
 table.fl tr.prov td:first-child{padding-left:12px}
 table.fl tr.hij{display:none}table.fl.pa tr.hij{display:table-row}
@@ -705,7 +713,7 @@ function tablaFlujo(L, n, F, pos0){
   };
   var plegable = function(lbl, k){ var ab = provAbierto; return '<tr class="det prov"><td><button class="plegar" data-plegar="prov" aria-expanded="' + ab + '" title="Ver de qué se compone">' + (ab ? "▾" : "▸") + '</button><b>' + lbl + '</b></td>' + L[k].map(function(v){ return cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
   var hija = function(f, lbl, k, c){ return '<tr class="det hij"><td><span class="dot ' + c + '"></span>' + lbl + '</td>' + L[k].map(function(v, i){ return v ? '<td class="num">' + (f ? '<button class="eslink" data-ech-sem="' + D.semanas[i].n + '" title="Ver los echeqs de esta semana">' + par(v) + '</button>' : par(v)) + '</td>' : cel(v); }).join("") + cel(SUMA(L[k])) + '</tr>'; };
-  var h = '<div class="legend"><span><span class="dot c"></span>Comprometido: ya registrado (facturas, cheques, planes)</span><span><span class="dot"></span>Estimado: ritmo real de pagos y cobranzas de los extractos, o calendario del informe</span></div><div class="scrollx"><table class="fl' + (provAbierto ? " pa" : "") + '">' + cab + '<tbody>';
+  var h = cobEntrada() + '<div class="legend"><span><span class="dot c"></span>Comprometido: ya registrado (facturas, cheques, planes)</span><span><span class="dot"></span>Estimado: ritmo real de pagos y cobranzas de los extractos, o calendario del informe</span></div><div class="scrollx"><table class="fl' + (provAbierto ? " pa" : "") + '">' + cab + '<tbody>';
   h += '<tr class="ini"><td>Saldo bancario inicial (todos los bancos)</td><td class="num">' + par(pos0) + '</td>' + new Array(n + 1).join("<td></td>") + '</tr>';
   h += sec("Ingresos") + detC("Cobranzas de clientes (cuentas a cobrar)", "cob_clientes", "c") + detC("Echeqs de clientes en cartera", "cob_echeq", "c") + detC("Cobranzas de ventas nuevas", "cob_nuevas", "") + sub("Total ingresos", "ingresos");
   h += sec("Egresos operativos") + plegable("Proveedores", "prov") + hija(adm, D.meta.echeqs_registro ? "Echeqs emitidos, pendientes de débito" : "Echeqs y cheques emitidos a proveedores", "pag_cheques", "c") + hija(false, D.meta.echeqs_registro ? (D.meta.ritmo_proveedores && D.meta.ritmo_proveedores.programacion ? "Facturas a pagar, escalonadas (transferencia o echeq a emitir)" : "Facturas a pagar (transferencia o echeq a emitir)") : "Transferencias y cuenta corriente", "pag_transf", "c") + hija(false, "Ritmo habitual estimado (completa lo que todavía no está registrado)", "pag_estimado", "") + det("Sueldos y jornales", "sueldos", "c") + (SUMA(L.nof) ? det("NOF (necesidades operativas)", "nof", "c") : "") + sub("Total egresos operativos", "oper");
@@ -930,6 +938,18 @@ var COB_TIT = {cob_clientes: "Cobranzas de clientes (cuentas a cobrar)", cob_ech
 var COB_CORTO = {cob_clientes: "Facturas de clientes", cob_echeq: "Echeqs de clientes", cob_nuevas: "Ventas nuevas"};
 var COB_CLASE = {aesa: "AESA", resto: "Resto de clientes"};
 var cobDet = {tipo: null, sem: 0};
+function cobEntrada(){
+  /* Lo primero que ve el administrador arriba de la tabla de flujo: la puerta al detalle de la cobranza o, si todavía no está, por qué y qué hacer (nunca en silencio). */
+  if (!D || !D.publicacion || D.publicacion.rol !== "admin") return "";
+  if (cobAdm()) {
+    return '<div class="cob-entrada"><span class="cob-tit"><b>De dónde sale la cobranza</b><small>Facturas, echeqs y ventas de cada semana, y por qué cae en esa fecha</small></span><span class="seg" role="group" aria-label="Abrir el detalle de la cobranza">' +
+      ["cob_clientes", "cob_echeq", "cob_nuevas"].map(function(k){ return '<button data-cob-det="' + k + '|0" title="' + COB_TIT[k] + '">' + COB_CORTO[k] + '</button>'; }).join("") + '</span></div>';
+  }
+  return '<div class="banner warn cob-falta"><b>«De dónde sale la cobranza» todavía no está en este informe.</b> ' + (!("cobranza_detalle" in D)
+    ? 'El servidor no mandó el detalle: falta subir la versión nueva del backend (<i>subir_backend.zip</i>) y después tocar «Actualizar ahora».'
+    : 'Este informe se calculó antes de esta versión. Tocá «Actualizar ahora» (barra de arriba), esperá de 1 a 3 minutos y recargá la página: el detalle aparece acá. Con la actualización diaria de las 11:00 se genera solo.') +
+    ' Si después de eso sigue sin aparecer, avisá al equipo de FINETIA.</div>';
+}
 function cobAdm(){ return !!(D && D.publicacion && D.publicacion.rol === "admin" && D.cobranza_detalle && D.cobranza_detalle.facturas); }
 function cobMonto(x, tipo){
   if (tipo === "cob_echeq") return x.imp;
