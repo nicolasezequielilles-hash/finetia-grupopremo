@@ -389,6 +389,10 @@ td.wrapc{white-space:normal}
 /* gráficos */
 .chart{position:relative}
 .chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .bm-hit{cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent}
+.vt-mes .m-c{display:none}
+@media (max-width:700px){.vt-mes{font-size:12px}.vt-mes th,.vt-mes td{padding-left:4px;padding-right:4px}.vt-mes .m-l{display:none}.vt-mes .m-c{display:inline}}
+@media (max-width:380px){.vt-mes th,.vt-mes td{padding-left:3px;padding-right:3px}}
 .tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line-2);border-radius:6px;padding:7px 10px;font-size:12px;box-shadow:0 4px 14px rgba(30,80,150,.18);z-index:3;display:none;white-space:nowrap}
 
 /* cumplimiento */
@@ -737,6 +741,28 @@ function tablaFlujo(L, n, F, pos0){
   return h + '</tbody></table></div>' + (admC ? '<div class="help">Tocá un importe de «Cobranzas de clientes», «Echeqs de clientes en cartera» o «Cobranzas de ventas nuevas» (o el nombre de la fila) para ver de qué facturas, echeqs y ventas sale, semana por semana.</div>' : "") +
     (adm ? '<div class="help">Desplegá «Proveedores» (▸) y tocá un importe de «Echeqs emitidos, pendientes de débito» para ver qué echeqs lo componen en esa semana.</div>' : "") + echPuente(n);
 }
+function notaImpuestos(){
+  // Al pie de la tabla (solo el administrador): de dónde sale «Impuestos y cargas sociales». Con VEP del F.931 informados sale de ellos (la seguridad social, aportes y contribuciones, va a un plan
+  // de pagos y no sale de caja; el resto de las obligaciones —obra social, ART y seguro de vida— se paga el día del VEP). Sin VEP pendientes, del ritmo de los extractos sin las cuotas de planes de ARCA.
+  var I = D.meta && D.meta.impuestos; if (!I || !(D.publicacion && D.publicacion.rol === "admin")) return "";
+  var mio = function(a){ return a.filter(function(x){ return ent === "GRUPO" || x.emp === ent; }); }, suma = function(a, k){ return a.reduce(function(t, x){ return t + (x[k] || 0); }, 0); };
+  var h = '<div class="help ritmo-nota"><b>Cómo se calcula «Impuestos y cargas sociales».</b> ';
+  if (I.modo === "calendario") {
+    var pend = mio(I.veps).filter(function(v){ return v.estado === "pendiente"; }), pg = mio(I.pagos), pl = mio(I.plan), per = {}, dias = {};
+    pend.forEach(function(v){ per[String(v.periodo).slice(5, 7) + "/" + String(v.periodo).slice(0, 4)] = 1; });
+    pg.forEach(function(x){ dias[dm(x.fecha)] = 1; });
+    var perT = Object.keys(per).join(" y "), diaT = Object.keys(dias).join(" y ");
+    h += 'Sale de los VEP del F.931 ya generados (período ' + perT + ': ' + MM(suma(pend, "total")) + ' en total), no de un promedio de los extractos. ';
+    if (I.regla === "plan" && pl.length) h += 'Las cargas sociales (aportes y contribuciones de la seguridad social, ' + MM(suma(pl, "importe")) + ') van a un plan de pagos y no salen de caja' + (pg.length ? '; el resto de las obligaciones (obra social, ART y seguro de vida, ' + MM(suma(pg, "importe")) + ') se paga el ' + diaT + ' y no se repite en las demás semanas' : '') + '. Las cuotas del plan nuevo se suman en «Planes de ARCA» cuando ARCA informe el plan. ';
+    else if (pg.length) h += 'Se paga todo el VEP (' + MM(suma(pg, "importe")) + ') el ' + diaT + '. ';
+    h += 'Las cuotas de los planes que ya existen (los débitos «VEP / ARCA» de los extractos) no se repiten en esta fila: están en «Planes de ARCA».';
+  } else {
+    var s = (I.semanal || {})[ent] || (I.semanal || {}).GRUPO;
+    h += 'Sin VEP del F.931 pendientes, sale del ritmo de los extractos' + (I.ventana ? ' del ' + dm(I.ventana[0]) + ' al ' + dm(I.ventana[1]) : ' de las últimas 13 semanas') + ': los débitos «VEP / ARCA»' + (s ? ', ' + MM(s.neto) + ' por semana' : '') +
+      ', sin las cuotas de planes de ARCA' + (s && s.planes > 0 ? ' (' + MM(s.planes) + ' por semana)' : '') + ', que ya van en «Planes de ARCA».';
+  }
+  return h + '</div>';
+}
 function notaProveedores(){
   // Al pie de la tabla: cómo se arma «Proveedores» (para que no parezca que sus tres líneas se suman dos veces) y cuánto se pagó de verdad por mes, al lado de lo que proyecta el flujo
   var R = D.meta && D.meta.ritmo_proveedores; if (!R || !R.semanal) return "";
@@ -892,7 +918,7 @@ function vistaSemanas(){
     kpi("Resultado · 4 semanas", MM(SUMA(L.resultado)), "ingresos menos egresos", SUMA(L.resultado) < 0 ? "bad" : "ok") + kpi("Saldo al cierre de la semana 4", MM(L.posicion[n - 1]), "mínimo del período " + MM(mn), mn < -F.acuerdo ? "bad" : "warn") + '</div>';
   h += '<div class="grid2"><div class="panel"><h3>Posición bancaria al cierre de cada semana</h3><div class="chart" id="ch_pos"></div></div><div class="panel"><h3>Ingresos y egresos</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div></div>';
   h += '<div class="panel" style="margin-top:16px"><h3>Cash flow de las próximas 4 semanas · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3>' + tablaFlujo(L, n, F, pos0) +
-    '<div class="help">Los egresos no cambian con el cumplimiento de cobranza. ' + (SUMA(L.nof) ? "Sueldos y NOF siguen el calendario de pagos del informe: mensuales, jornales y NOF el 4.º día hábil de cada mes y de cada quincena, y el SAC (aguinaldo) en su fecha legal, el 18/12 y el 30/06. " : "Sueldos y NOF se estiman con el ritmo real de pagos de las últimas 13 semanas según los extractos bancarios. ") + 'Los pagos a proveedores combinan la deuda registrada con el ritmo real de las últimas 13 semanas (' + (D.meta.ventana_ritmo ? dm(D.meta.ventana_ritmo[0]) + " al " + dm(D.meta.ventana_ritmo[1]) : "") + ') según los extractos bancarios.</div>' + notaProveedores() + '</div>' + panelCobDetalle(L, n);
+    '<div class="help">Los egresos no cambian con el cumplimiento de cobranza. ' + (SUMA(L.nof) ? "Sueldos y NOF siguen el calendario de pagos del informe: mensuales, jornales y NOF el 4.º día hábil de cada mes y de cada quincena, y el SAC (aguinaldo) en su fecha legal, el 18/12 y el 30/06. " : "Sueldos y NOF se estiman con el ritmo real de pagos de las últimas 13 semanas según los extractos bancarios. ") + 'Los pagos a proveedores combinan la deuda registrada con el ritmo real de las últimas 13 semanas (' + (D.meta.ventana_ritmo ? dm(D.meta.ventana_ritmo[0]) + " al " + dm(D.meta.ventana_ritmo[1]) : "") + ') según los extractos bancarios.</div>' + notaProveedores() + notaImpuestos() + '</div>' + panelCobDetalle(L, n);
   $("vista").innerHTML = h;
   lineaPosicion($("ch_pos"), L.posicion, F.acuerdo, D.semanas.slice(0, n));
   barrasSemanales($("ch_bar"), L.ingresos, L.egresos, D.semanas.slice(0, n));
@@ -905,7 +931,7 @@ function vistaFlujo(){
     kpi("Ingresos · 13 semanas", MM(SUMA(L.ingresos)), pct(cumpl) + " de cumplimiento", "") + kpi("Egresos · 13 semanas", MM(SUMA(L.egresos)), "no cambian con el cumplimiento", "") + '</div>';
   h += '<div class="panel"><h3>Posición bancaria acumulada · ' + NOMBRE[ent] + (Math.abs(cumpl - 1) > 1e-9 ? " · cumplimiento " + pct(cumpl) : "") + '</h3><div class="chart" id="ch_pos"></div></div>';
   h += '<div class="panel"><h3>Ingresos y egresos por semana · ' + NOMBRE[ent] + '</h3><div class="legend"><span><i style="background:var(--s1)"></i>Ingresos</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Egresos</span></div><div class="chart" id="ch_bar"></div></div>';
-  h += '<div class="panel"><h3>Flujo de caja trimestral · ' + NOMBRE[ent] + '</h3>' + tablaFlujo(L, n, F, F.pos0) + notaProveedores() + '</div>';
+  h += '<div class="panel"><h3>Flujo de caja trimestral · ' + NOMBRE[ent] + '</h3>' + tablaFlujo(L, n, F, F.pos0) + notaProveedores() + notaImpuestos() + '</div>';
   h += panelCobDetalle(L, n);
   h += '<div class="panel"><h3>¿Qué pasa si se cobra menos?</h3><div class="scrollx"><table><thead><tr><th>Cumplimiento</th><th>Punto más bajo</th><th>Semana</th><th>Faltan sobre acuerdos</th></tr></thead><tbody>' +
     D.escenarios.map(function(e){ var p = e.emp[ent].posicion, m = Math.min.apply(null, p), f = m < -F.acuerdo ? -(m + F.acuerdo) : 0;
@@ -1335,6 +1361,7 @@ function vistaVentas(){
   var V = D.ventas;
   if (!V) { $("vista").innerHTML = '<div class="panel"><h3>Proyección de ventas</h3><div class="help">Todavía no hay un pronóstico de ventas cargado. Cuando Comercial suba la planilla de proyección a la carpeta de Drive, aparece acá y empieza a ajustar la cobranza del flujo de caja.</div></div>'; return; }
   var M = V.meses, T = V.total, cur = T[1], cer = T[0], I = V.impacto || {}, admin = D.publicacion && D.publicacion.rol === "admin";
+  var SR = V.serie || [];
   var pc = function(x){ return x === null || x === undefined ? "—" : Math.round(x * 100) + "%"; };
   var tono = function(x){ return x === null || x === undefined ? "" : (x >= 0.95 ? "pc-ok" : (x >= 0.7 ? "pc-warn" : "pc-bad")); };
   var sg = function(v){ return (v >= 0 ? "+" : "−") + MM(Math.abs(v)).replace("−", ""); };
@@ -1358,7 +1385,14 @@ function vistaVentas(){
       (V.sin_importes_en_ventana ? '<button id="btn_todosv" aria-pressed="' + todosV + '" style="margin-left:10px">' + (todosV ? "Ocultar renglones sin importes" : "Ver también los " + V.sin_importes_en_ventana + " renglones sin importes en estos meses") + '</button>' : "") + '</div>' +
     '<div class="scrollx"><table class="tl vt"><thead><tr>' + cab1 + '</tr><tr>' + cab2 + '</tr></thead><tbody>' + filas +
     '<tr class="tot"><td>Total grupo</td>' + celdas(T) + '</tr></tbody></table></div>' +
-    '<div class="help">Tal como lo carga Comercial en su planilla: unidad de negocios, sector y empresa. % ejecutado = real ÷ proyectado. El real del mes en curso se completa cuando Comercial lo carga.' + (V.faltan.length ? ' <b>Falta el pronóstico de ' + V.faltan.join(", ") + '</b>: cuando se suba la planilla de ese año, la columna se completa sola.' : '') + '</div></div>';
+    '<div class="help">Tal como lo carga Comercial en su planilla: unidad de negocios, sector y empresa. % ejecutado = real ÷ proyectado; el total del grupo es el real total ÷ el proyectado total. El real del mes en curso se completa cuando Comercial lo carga.' + (SR.length > 1 ? ' Para leer el % de un mes en su contexto, abajo está la ejecución mes a mes.' : '') + (V.faltan.length ? ' <b>Falta el pronóstico de ' + V.faltan.join(", ") + '</b>: cuando se suba la planilla de ese año, la columna se completa sola.' : '') + '</div></div>';
+  var dual = function(l, c){ return '<span class="m-l">' + l + '</span><span class="m-c">' + c + '</span>'; };      // texto completo en pantalla grande y corto en celular, para que entre todo sin desplazar
+  if (SR.length > 1) h += '<div class="panel"><h3>Ejecución mes a mes · ' + SR[0].ym.slice(0, 4) + ' · en millones de $</h3><div class="scrollx"><table class="tl vt-mes"><thead><tr><th>Mes</th><th class="n">' + dual("Proyectado", "Proy.") + '</th><th class="n">Real</th><th class="n">' + dual("% ejecutado", "% ejec.") + '</th><th class="n" title="Acumulado del año hasta ese mes">' + dual("% acumulado<br>del año", "% acum.") + '</th></tr></thead><tbody>' +
+    SR.map(function(x, i){ var ult = i === SR.length - 1; return '<tr' + (ult ? ' style="font-weight:600"' : '') + '><td>' + dual(esc(x.nombre), esc(MESC(x.ym))) + '</td><td class="num">' + mm(x.p) + '</td><td class="num">' + mm(x.r) + '</td><td class="num ' + tono(x.pct) + '">' + pc(x.pct) + '</td><td class="num">' + pc(x.acum_pct) + '</td></tr>'; }).join("") +
+    '<tr class="tot"><td>' + dual("Acumulado a " + esc(V.acumulado.hasta.split(" ")[0].toLowerCase()), "Acum. " + esc(V.acumulado.hasta.split(" ")[0].toLowerCase().slice(0, 3))) + '</td><td class="num">' + mm(V.acumulado.p) + '</td><td class="num">' + mm(V.acumulado.r) + '</td><td class="num ' + tono(V.acumulado.pct) + '">' + pc(V.acumulado.pct) + '</td><td></td></tr></tbody></table></div>' +
+    '<div class="help"><b>Cómo se lee.</b> % ejecutado = real ÷ proyectado de cada mes; % acumulado = lo mismo sumando desde enero hasta ese mes. El real es lo facturado en el mes, según la planilla de Comercial: una venta que se factura tarde cuenta en el mes en que se factura, no en el que se proyectó. ' +
+    'Por eso un mes puede pasar de 100 % y otro quedar corto, y se compensan entre sí: para ver cómo viene el año hay que mirar el acumulado. ' +
+    'El total del grupo es el real total ÷ el proyectado total (no el promedio de los porcentajes de cada renglón) e incluye lo facturado a clientes que no estaban en el pronóstico: en la vista «Empresas» figuran con proyectado «—».</div></div>';
   var hayCN = V.contrato.some(function(x){ return x; }) || V.nuevas.some(function(x){ return x; });
   if (hayCN) h += '<div class="panel"><h3>Ventas bajo contrato y ventas nuevas · proyectado</h3><div class="scrollx"><table class="tl"><thead><tr><th>Mes</th><th class="n">Bajo contrato</th><th class="n">Ventas nuevas</th><th class="n">% bajo contrato</th></tr></thead><tbody>' +
     M.map(function(m, i){ var c = V.contrato[i], n = V.nuevas[i]; if (!c && !n) return ""; return '<tr><td>' + m.nombre + '</td><td class="num"><b>' + mm(c || 0) + '</b></td><td class="num">' + mm(n || 0) + '</td><td class="num">' + pct((c || 0) / ((c || 0) + (n || 0) || 1)) + '</td></tr>'; }).join("") +
@@ -2022,20 +2056,64 @@ function barrasMeses(host, meses){
   var hi = Math.max.apply(null, meses.map(function(m){ return (m.HC || 0) + (m.PM || 0); }).concat([1])), y = function(v){ return mt + (H - mt - mb) * (1 - v / hi); };
   var step = Math.pow(10, Math.floor(Math.log10(hi / 3))), k = hi / 3 / step; step *= k < 1.5 ? 1 : k < 3.5 ? 2 : k < 7.5 ? 5 : 10;
   var cw = (W - ml - mr) / n, bw = cw * 0.62, cada = W < 700 ? 3 : 1;
-  var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Facturación mensual de obras por empresa, últimos ' + n + ' meses">';
+  var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="group" aria-label="Facturación mensual de obras por empresa, últimos ' + n + ' meses. Con las flechas se recorre mes por mes.">';
   for (var t = 0; t <= hi; t += step) s += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(t).toFixed(1) + '" y2="' + y(t).toFixed(1) + '" stroke="var(--line)"/><text x="' + (ml - 8) + '" y="' + (y(t) + 4).toFixed(1) + '" text-anchor="end" font-size="12" fill="var(--ink-3)">' + NF0.format(Math.round(t / 1e6)) + '</text>';
+  s += '<rect id="bm_sel" y="' + mt + '" width="' + cw.toFixed(1) + '" height="' + (H - mt - mb) + '" rx="3" fill="var(--accent)" fill-opacity=".08" stroke="var(--accent)" stroke-opacity=".3" style="display:none;pointer-events:none"/>';
   meses.forEach(function(m, i){
     var x0 = ml + cw * i + (cw - bw) / 2, base = 0;
-    [["PM", "var(--s1)", "var(--s1)", "Premoldeados"], ["HC", "var(--s2)", "var(--s2b)", "Hormigones Cardales"]].forEach(function(p){
+    [["PM", "var(--s1)", "var(--s1)"], ["HC", "var(--s2)", "var(--s2b)"]].forEach(function(p){
       var v = m[p[0]] || 0; if (v <= 0) return;
       var yt = y(base + v), yb = y(base);
-      s += '<rect x="' + x0.toFixed(1) + '" y="' + yt.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, yb - yt - 2).toFixed(1) + '" rx="2" fill="' + p[1] + '" stroke="' + p[2] + '"' + (m.parcial ? ' opacity=".55"' : "") +
-        '><title>' + esc(MESL(m.mes) + " · " + p[3] + ": " + MM(v) + (m.parcial ? " (mes en curso, parcial)" : "")) + '</title></rect>';
+      s += '<rect x="' + x0.toFixed(1) + '" y="' + yt.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, yb - yt - 2).toFixed(1) + '" rx="2" fill="' + p[1] + '" stroke="' + p[2] + '"' + (m.parcial ? ' opacity=".55"' : "") + '/>';
       base += v;
     });
     if (i % cada === 0 || i === n - 1) s += '<text x="' + (ml + cw * (i + 0.5)).toFixed(1) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="12" fill="var(--ink-3)">' + MESC(m.mes) + (m.parcial ? "*" : "") + '</text>';
   });
-  host.innerHTML = s + "</svg>";
+  // una columna sensible por mes, de punta a punta del gráfico: se puede tocar aunque la barra sea chica; con teclado se recorre con las flechas
+  meses.forEach(function(m, i){
+    var hc = m.HC || 0, pm = m.PM || 0;
+    s += '<rect class="bm-hit" data-i="' + i + '" x="' + (ml + cw * i).toFixed(1) + '" y="' + mt + '" width="' + cw.toFixed(1) + '" height="' + (H - mt) + '" fill="transparent" tabindex="' + (i === 0 ? 0 : -1) + '" role="img" aria-label="' +
+      esc(MESL(m.mes) + (m.parcial ? " (mes en curso, parcial)" : "") + ". Premoldeados " + MM(pm) + ", Hormigones Cardales " + MM(hc) + ", total " + MM(hc + pm)) + '"/>';
+  });
+  host.innerHTML = s + '</svg><div class="tip"></div>';
+  var svg = host.querySelector("svg"), tip = host.querySelector(".tip"), sel = host.querySelector("#bm_sel"), hits = host.querySelectorAll(".bm-hit"), reloj = null, toque = 0;
+  var ocultar = function(){ tip.style.display = "none"; sel.style.display = "none"; };
+  var cel = W < 700;
+  var fila = function(c, nombre, v){ return '<div style="display:flex;justify-content:space-between;gap:' + (cel ? 10 : 16) + 'px"><span><i style="display:inline-block;width:' + (cel ? 8 : 9) + 'px;height:' + (cel ? 8 : 9) + 'px;border-radius:2px;margin-right:' + (cel ? 5 : 6) + 'px;vertical-align:-1px;background:' + c + '"></i>' + nombre + '</span><b class="num">' + (v ? MM(v) : "—") + '</b></div>'; };
+  var ver = function(i){
+    var m = meses[i], hc = m.HC || 0, pm = m.PM || 0, tot = hc + pm;
+    tip.style.fontSize = cel ? "11px" : ""; tip.style.padding = cel ? "6px 8px" : "";
+    tip.innerHTML = '<div style="margin-bottom:3px"><b>' + esc(MESL(m.mes)) + '</b>' + (m.parcial ? ' <span style="color:var(--ink-3)">· ' + (cel ? "parcial" : "mes en curso, parcial") + '</span>' : "") + '</div>' +
+      fila("var(--s1)", "Premoldeados", pm) + fila("var(--s2)", cel ? "H. Cardales" : "Hormigones Cardales", hc) +
+      '<div style="display:flex;justify-content:space-between;gap:' + (cel ? 10 : 16) + 'px;margin-top:4px;padding-top:4px;border-top:1px solid var(--line)"><span>Total</span><b class="num">' + MM(tot) + '</b></div>';
+    sel.setAttribute("x", (ml + cw * i).toFixed(1)); sel.style.display = ""; tip.style.display = "block";
+    var r = svg.getBoundingClientRect(), f = r.width / W, w = tip.offsetWidth, h = tip.offsetHeight;
+    var x1 = (ml + cw * i) * f, x2 = (ml + cw * (i + 1)) * f, yb = y(Math.max(tot, 0)) * f, fondo = (H - mb) * f, left, top;
+    if (yb - h - 8 >= 0) { left = (x1 + x2) / 2 - w / 2; top = yb - h - 8; }                                   // lo normal: arriba de la barra
+    else {                                                                                                         // barra alta: al costado, del lado donde entra
+      top = Math.max(0, Math.min(yb - 6, fondo - h));
+      if (x2 + 8 + w <= r.width) left = x2 + 8; else if (x1 - 8 - w >= 0) left = x1 - 8 - w;
+      else left = x1 > r.width - x2 ? 0 : r.width - w;                                                            // último recurso: del lado con más lugar, aunque roce la barra (nunca fuera de la pantalla)
+    }
+    tip.style.left = Math.max(0, Math.min(left, r.width - w)) + "px"; tip.style.top = top.toFixed(0) + "px";
+  };
+  Array.prototype.forEach.call(hits, function(c){
+    var i = +c.getAttribute("data-i");
+    c.addEventListener("mouseenter", function(){ ver(i); });
+    c.addEventListener("mouseleave", function(){ if (Date.now() - toque > 700) ocultar(); });          // el «mouseleave» que algunos celulares disparan justo después del toque no apaga el cuadro
+    c.addEventListener("focus", function(){ ver(i); }); c.addEventListener("blur", ocultar);
+    c.addEventListener("touchstart", function(){ toque = Date.now(); ver(i); clearTimeout(reloj); reloj = setTimeout(ocultar, 5000); }, {passive: true});
+    c.addEventListener("keydown", function(ev){
+      var j = ev.key === "ArrowRight" ? i + 1 : ev.key === "ArrowLeft" ? i - 1 : ev.key === "Home" ? 0 : ev.key === "End" ? n - 1 : ev.key === "Escape" ? -2 : null;
+      if (j === null) return; ev.preventDefault();
+      if (j === -2) { ocultar(); return; }
+      j = Math.max(0, Math.min(n - 1, j)); if (j === i) return;
+      c.setAttribute("tabindex", "-1"); hits[j].setAttribute("tabindex", "0"); hits[j].focus();
+    });
+  });
+  if (window._bmFuera) document.removeEventListener("touchstart", window._bmFuera, true);
+  window._bmFuera = function(ev){ if (!(ev.target && ev.target.closest && ev.target.closest(".bm-hit"))) ocultar(); };
+  document.addEventListener("touchstart", window._bmFuera, {passive: true, capture: true});
 }
 function vistaObrasResumen(){
   var R = D.obras_resumen, admin = (D.publicacion || {}).rol === "admin";
@@ -2053,7 +2131,7 @@ function vistaObrasResumen(){
     kpi("Facturado en " + K.anio, MM(K.facturado_anio), "ritmo de " + MM(K.prom_3m) + " por mes (últimos 3 meses cerrados)", "") +
     kpi("Por cobrar de obras", MM(K.a_cobrar), K.vencido ? MM(K.vencido) + " vencido" : "nada vencido", K.vencido ? "warn" : "") + '</div></div>';
   h += '<div class="panel"><h3>Facturación mensual de obras (neto, en millones de pesos)</h3><div class="legend"><span><i style="background:var(--s1);border:1px solid var(--s1)"></i>Premoldeados</span><span><i style="background:var(--s2);border:1px solid var(--s2b)"></i>Hormigones Cardales</span></div><div class="chart" id="ch_obras"></div>' +
-    '<div class="help">Facturas de entrega emitidas en cada mes, sin IVA y netas de notas de crédito de ajuste. * Mes en curso, parcial. La facturación sigue el ritmo de certificación de cada obra, por eso hay meses con mucho y meses con poco.</div></div>';
+    '<div class="help">Tocá una barra (o pasá el mouse por encima) para ver el monto de cada empresa y el total del mes. Facturas de entrega emitidas en cada mes, sin IVA y netas de notas de crédito de ajuste. * Mes en curso, parcial. La facturación sigue el ritmo de certificación de cada obra, por eso hay meses con mucho y meses con poco.</div></div>';
   var filas = "", tarjetas = "";
   R.obras.forEach(function(f){
     var quieta = f.en_curso && !(f.prom_3m > 0), pill = '<span class="pill ' + (f.en_curso ? 'ok' : '') + '" style="padding:1px 9px;font-size:11px">' + esc(f.estado) + '</span>';
